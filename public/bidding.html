@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-Mobile Ad Bidding</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        /* Map Styles */
+        #map {
+            height: 400px;
+            width: 100%;
+            border-radius: 12px;
+            margin-top: 15px;
+            border: 2px solid var(--tmobile-gray);
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-mockup {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .city-marker {
+            background: var(--tmobile-dark-gray);
+            border: 2px solid var(--tmobile-magenta);
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .city-marker:hover {
+            background: rgba(226, 0, 116, 0.1);
+            transform: scale(1.05);
+        }
+
+        .city-marker.selected {
+            background: var(--tmobile-magenta);
+            border-color: var(--success-green);
+            box-shadow: 0 0 20px rgba(0, 214, 89, 0.4);
+        }
+
+        .city-name {
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .city-zip {
+            font-size: 0.8em;
+            color: var(--tmobile-light-gray);
+        }
+
+        .city-population {
+            font-size: 0.75em;
+            color: var(--tmobile-gray);
+            margin-top: 5px;
+        }
+
+        .map-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .location-btn {
+            position: absolute;
+            top: 25px;
+            right: 10px;
+            z-index: 1000;
+            background: var(--tmobile-magenta);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .location-btn:hover {
+            background: var(--tmobile-light-magenta);
+            transform: translateY(-2px);
+        }
+
+        .zipcode-info {
+            background: var(--tmobile-black);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .zipcode-info.active {
+            display: block;
+        }
+
+        .selected-zipcodes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .zipcode-tag {
+            background: var(--tmobile-magenta);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .zipcode-tag .remove {
+            cursor: pointer;
+            font-weight: bold;
+            opacity: 0.8;
+        }
+
+        .zipcode-tag .remove:hover {
+            opacity: 1;
+        }
+
+        /* Bidding Page Styles */
+        .bidding-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .progress-bar::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--tmobile-gray);
+            z-index: -1;
+        }
+
+        .progress-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: var(--tmobile-black);
+            padding: 0 15px;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--tmobile-gray);
+            color: var(--tmobile-white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .step-circle.active {
+            background: var(--tmobile-magenta);
+        }
+
+        .step-circle.completed {
+            background: var(--success-green);
+        }
+
+        .step-label {
+            font-size: 0.85em;
+            color: var(--tmobile-light-gray);
+        }
+
+        .bidding-card {
+            background: var(--tmobile-dark-gray);
+            border-radius: 16px;
+            padding: 40px;
+            border: 2px solid var(--tmobile-gray);
+            display: none;
+        }
+
+        .bidding-card.active {
+            display: block;
+        }
+
+        .bidding-card h2 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .bidding-card .subtitle {
+            color: var(--tmobile-light-gray);
+            margin-bottom: 30px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-field label {
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--tmobile-white);
+        }
+
+        .time-slot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .time-slot {
+            padding: 12px;
+            background: var(--tmobile-black);
+            border: 2px solid var(--tmobile-gray);
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .time-slot:hover {
+            border-color: var(--tmobile-magenta);
+        }
+
+        .time-slot.selected {
+            background: var(--tmobile-magenta);
+            border-color: var(--tmobile-magenta);
+        }
+
+        .info-box {
+            background: rgba(226, 0, 116, 0.1);
+            border-left: 4px solid var(--tmobile-magenta);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .info-box h3 {
+            margin-bottom: 10px;
+        }
+
+        .reach-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: var(--tmobile-black);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid var(--tmobile-gray);
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: var(--tmobile-magenta);
+        }
+
+        .stat-label {
+            color: var(--tmobile-light-gray);
+            margin-top: 5px;
+        }
+
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            background: var(--tmobile-black);
+            border: 2px solid var(--tmobile-gray);
+            border-radius: 12px;
+            cursor: pointer;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-option:hover {
+            border-color: var(--tmobile-magenta);
+        }
+
+        .checkbox-option input[type="checkbox"] {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+
+        .checkbox-option.selected {
+            border-color: var(--tmobile-magenta);
+            background: rgba(226, 0, 116, 0.1);
+        }
+
+        .poster-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .poster-item {
+            position: relative;
+            background: var(--tmobile-black);
+            border: 3px solid var(--tmobile-gray);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .poster-item:hover {
+            border-color: var(--tmobile-magenta);
+            transform: translateY(-5px);
+        }
+
+        .poster-item.selected {
+            border-color: var(--success-green);
+            box-shadow: 0 0 20px rgba(0, 214, 89, 0.4);
+        }
+
+        .poster-item img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+
+        .poster-info {
+            padding: 15px;
+        }
+
+        .poster-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .poster-date {
+            font-size: 0.85em;
+            color: var(--tmobile-light-gray);
+        }
+
+        .selected-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--success-green);
+            color: var(--tmobile-white);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .price-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .price-card {
+            background: var(--tmobile-black);
+            border: 3px solid var(--tmobile-gray);
+            border-radius: 16px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .price-card:hover {
+            border-color: var(--tmobile-magenta);
+            transform: translateY(-5px);
+        }
+
+        .price-card.selected {
+            border-color: var(--tmobile-magenta);
+            background: rgba(226, 0, 116, 0.1);
+        }
+
+        .price-label {
+            font-size: 0.9em;
+            color: var(--tmobile-light-gray);
+            margin-bottom: 10px;
+        }
+
+        .price-amount {
+            font-size: 3em;
+            font-weight: 700;
+            color: var(--tmobile-magenta);
+            margin-bottom: 10px;
+        }
+
+        .price-description {
+            font-size: 0.85em;
+            color: var(--tmobile-light-gray);
+        }
+
+        .custom-price {
+            margin-top: 20px;
+        }
+
+        .custom-price input {
+            font-size: 1.5em;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn-back {
+            background: var(--tmobile-gray);
+            color: var(--tmobile-white);
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-back:hover {
+            background: var(--tmobile-black);
+        }
+
+        @media (max-width: 768px) {
+            .bidding-card {
+                padding: 20px;
+            }
+
+            .progress-bar {
+                font-size: 0.85em;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .price-amount {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">
+                <div>
+                    <div class="navbar-logo">T-Mobile</div>
+                    <div class="navbar-tagline">Ad System</div>
+                </div>
+            </a>
+            <ul class="navbar-menu">
+                <li><a href="/" class="navbar-link">Home</a></li>
+                <li><a href="/my-ads.html" class="navbar-link">My Ads</a></li>
+                <li><a href="/my-biddings.html" class="navbar-link">My Biddings</a></li>
+            </ul>
+            <div class="user-info">
+                <span class="user-display"></span>
+                <a href="/login.html" class="btn-nav-login">Login</a>
+                <button class="btn-nav-logout" onclick="signOutUser()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="bidding-container">
+        <!-- Progress Bar -->
+        <div class="progress-bar">
+            <div class="progress-step">
+                <div class="step-circle active" id="circle-1">1</div>
+                <div class="step-label">Location & Time</div>
+            </div>
+            <div class="progress-step">
+                <div class="step-circle" id="circle-2">2</div>
+                <div class="step-label">Audience</div>
+            </div>
+            <div class="progress-step">
+                <div class="step-circle" id="circle-3">3</div>
+                <div class="step-label">Select Ad</div>
+            </div>
+            <div class="progress-step">
+                <div class="step-circle" id="circle-4">4</div>
+                <div class="step-label">Bidding</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Location & Time -->
+        <div class="bidding-card active" id="step-1">
+            <h2>Location & Time Selection</h2>
+            <p class="subtitle">Choose where and when to display your ads</p>
+
+            <div class="form-field">
+                <label>Select Location on Map</label>
+                <p style="color: var(--tmobile-light-gray); font-size: 0.9em; margin-bottom: 10px;">
+                    Click on the map to select ZIP code regions, or click "My Location" to auto-detect
+                </p>
+                <div class="map-container">
+                    <div id="map">
+                        <div class="map-mockup" id="mapMockup">
+                            <!-- Cities will be added by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                <div id="zipcodeInfo" class="zipcode-info">
+                    <strong>Selected ZIP Codes:</strong>
+                    <div id="selectedZipcodes" class="selected-zipcodes"></div>
+                </div>
+            </div>
+
+            <div class="form-row" style="margin-top: 30px;">
+                <div class="form-field">
+                    <label>Or Enter ZIP Code Manually</label>
+                    <input type="text" id="zipcode" placeholder="e.g., 98101, 10001, 90210" maxlength="5" oninput="handleManualZipcode()">
+                </div>
+                <div class="form-field">
+                    <label>Start Date</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="form-field">
+                    <label>End Date (Minimum 7 days)</label>
+                    <input type="date" id="endDate">
+                </div>
+            </div>
+
+            <div class="form-field">
+                <label>Select Time Slots (2-hour blocks)</label>
+                <div class="time-slot-grid" id="timeSlots">
+                    <!-- Time slots will be generated by JS -->
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-primary" onclick="goToStep2()">Next: Audience Selection</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Audience & Reach -->
+        <div class="bidding-card" id="step-2">
+            <h2>Audience Selection</h2>
+            <p class="subtitle">Optimize your ad reach</p>
+
+            <div class="info-box">
+                <h3>📊 Estimated Reach</h3>
+                <div class="reach-stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="deviceReach">-</div>
+                        <div class="stat-label">Devices</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="impressionsReach">-</div>
+                        <div class="stat-label">Impressions/Day</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px;">Target Advanced Users?</h3>
+            <div class="checkbox-option" id="advancedOption" onclick="toggleAdvanced()">
+                <input type="checkbox" id="advancedCheckbox">
+                <div>
+                    <div style="font-weight: 600; margin-bottom: 5px;">Premium Audience (+30% reach)</div>
+                    <div style="font-size: 0.9em; color: var(--tmobile-light-gray);">
+                        Target high-engagement users in premium locations
+                    </div>
+                    <div style="font-size: 0.9em; color: var(--tmobile-magenta); margin-top: 5px;">
+                        Additional devices: <span id="advancedReach">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-back" onclick="goToStep(1)">Back</button>
+                <button class="btn-primary" onclick="goToStep3()">Next: Select Ad</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Select Poster -->
+        <div class="bidding-card" id="step-3">
+            <h2>Select Your Ad</h2>
+            <p class="subtitle">Choose from your saved ads or create a new one</p>
+
+            <div style="margin: 20px 0;">
+                <a href="/ad-generator.html" class="btn-secondary">+ Create New Ad</a>
+            </div>
+
+            <h3 style="margin-top: 30px;">Your Saved Ads</h3>
+            <div class="poster-grid" id="posterGrid">
+                <div style="padding: 40px; text-align: center; color: var(--tmobile-light-gray);">
+                    Loading your ads...
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-back" onclick="goToStep(2)">Back</button>
+                <button class="btn-primary" onclick="goToStep4()">Next: Bidding</button>
+            </div>
+        </div>
+
+        <!-- Step 4: Bidding -->
+        <div class="bidding-card" id="step-4">
+            <h2>Place Your Bid</h2>
+            <p class="subtitle">Choose your bidding strategy</p>
+
+            <h3>Recommended Prices</h3>
+            <div class="price-options">
+                <div class="price-card" onclick="selectPrice(50, 'conservative')">
+                    <div class="price-label">Conservative</div>
+                    <div class="price-amount">$50</div>
+                    <div class="price-description">Safe bid, moderate competition</div>
+                </div>
+                <div class="price-card" onclick="selectPrice(100, 'competitive')">
+                    <div class="price-label">Competitive</div>
+                    <div class="price-amount">$100</div>
+                    <div class="price-description">Recommended for best results</div>
+                </div>
+                <div class="price-card" onclick="selectPrice(200, 'aggressive')">
+                    <div class="price-label">Aggressive</div>
+                    <div class="price-amount">$200</div>
+                    <div class="price-description">Maximum visibility</div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px;">Custom Bid</h3>
+            <div class="custom-price">
+                <input type="number" id="customBid" placeholder="Enter custom amount" min="10" step="10">
+            </div>
+
+            <div class="info-box" style="margin-top: 30px;">
+                <h3>📋 Campaign Summary</h3>
+                <div id="campaignSummary">
+                    <!-- Summary will be filled by JS -->
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-back" onclick="goToStep(3)">Back</button>
+                <button class="btn-primary" onclick="submitBid()">Submit Bid</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Scripts -->
+    <script type="module" src="/js/bidding.js"></script>
+</body>
+</html>

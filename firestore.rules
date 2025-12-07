@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Ads collection - users can only read/write their own ads
+    match /ads/{adId} {
+      // Allow users to read their own ads
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Allow users to create ads with their own userId
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+
+      // Allow users to update their own ads
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Allow users to delete their own ads
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Bids collection - users can only read/write their own bids
+    match /bids/{bidId} {
+      // Allow users to read their own bids
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Allow users to create bids with their own userId
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+
+      // Allow users to update their own bids
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Allow users to delete their own bids
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+  }
+}

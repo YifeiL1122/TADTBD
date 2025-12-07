@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-Mobile Ad System - Home</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        /* Hero Section */
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 40px;
+            display: flex;
+            align-items: center;
+            gap: 60px;
+        }
+
+        .hero-content {
+            flex: 1;
+        }
+
+        .hero-content h1 {
+            font-size: 3.5em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #E20074 0%, #FF2D92 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: left;
+        }
+
+        .hero-content p {
+            font-size: 1.2em;
+            color: var(--tmobile-light-gray);
+            margin-bottom: 40px;
+            line-height: 1.6;
+            text-align: left;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .hero-image {
+            flex: 0 0 400px;
+            max-width: 400px;
+        }
+
+        .hero-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 12px;
+        }
+
+        /* Features Section */
+        .features {
+            max-width: 1200px;
+            margin: 80px auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            padding: 0 20px;
+        }
+
+        .feature-card {
+            background: var(--tmobile-dark-gray);
+            padding: 40px 30px;
+            border-radius: 16px;
+            border: 2px solid var(--tmobile-gray);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: var(--tmobile-magenta);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(226, 0, 116, 0.3);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--tmobile-magenta) 0%, var(--tmobile-light-magenta) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: var(--tmobile-white);
+        }
+
+        .feature-card p {
+            color: var(--tmobile-light-gray);
+            line-height: 1.6;
+        }
+
+        /* CTA Section */
+        .cta {
+            text-align: center;
+            padding: 80px 20px;
+            background: linear-gradient(135deg, rgba(226, 0, 116, 0.1) 0%, rgba(168, 0, 90, 0.1) 100%);
+            border-radius: 20px;
+            margin: 80px 20px;
+        }
+
+        .cta h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .cta p {
+            font-size: 1.2em;
+            color: var(--tmobile-light-gray);
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 968px) {
+            .hero {
+                flex-direction: column;
+                padding: 60px 20px;
+                gap: 40px;
+            }
+
+            .hero-content {
+                text-align: center;
+            }
+
+            .hero-content h1 {
+                font-size: 2.5em;
+                text-align: center;
+            }
+
+            .hero-content p {
+                font-size: 1.1em;
+                text-align: center;
+            }
+
+            .hero-buttons {
+                justify-content: center;
+            }
+
+            .hero-image {
+                flex: 0 0 auto;
+                max-width: 100%;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">
+                <div>
+                    <div class="navbar-logo">T-Mobile</div>
+                    <div class="navbar-tagline">Ad System</div>
+                </div>
+            </a>
+            <ul class="navbar-menu">
+                <li><a href="/" class="navbar-link active">Home</a></li>
+                <li><a href="/my-ads.html" class="navbar-link">My Ads</a></li>
+                <li><a href="/my-biddings.html" class="navbar-link">My Biddings</a></li>
+                <li><a href="/admin-login.html" class="navbar-link">Admin</a></li>
+            </ul>
+            <div class="user-info">
+                <span class="user-display"></span>
+                <a href="/login.html" class="btn-nav-login">Login</a>
+                <button class="btn-nav-logout" onclick="signOutUser()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Professional Ad Creation Made Simple</h1>
+            <p>Create stunning T-Mobile advertisements in seconds with our powerful ad generator. Choose from beautiful templates, customize with your brand, and download instantly.</p>
+            <div class="hero-buttons">
+                <a href="/my-ads.html" class="btn-primary" style="font-size: 1.1em; padding: 15px 40px;">My Ads</a>
+                <a href="/my-biddings.html" class="btn-secondary" style="font-size: 1.1em; padding: 15px 40px;">My Biddings</a>
+                <a href="/settings.html" class="btn-secondary" style="font-size: 1.1em; padding: 15px 40px;">Settings</a>
+            </div>
+        </div>
+        <div class="hero-image">
+            <img src="/background-preview.png" alt="T-Mobile Digital Display">
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="feature-card">
+            <div class="feature-icon">🎨</div>
+            <h3>Beautiful Templates</h3>
+            <p>Choose from professionally designed templates that follow T-Mobile's brand guidelines perfectly.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>Lightning Fast</h3>
+            <p>Create and download your ads in seconds. No complicated software or design experience needed.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">☁️</div>
+            <h3>Cloud Storage</h3>
+            <p>Save your ads to the cloud and access them from anywhere. Never lose your work again.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <h3>Customizable</h3>
+            <p>Upload your logo, choose colors, and add your own text to make each ad uniquely yours.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">📱</div>
+            <h3>Mobile Optimized</h3>
+            <p>Ads are optimized for mobile displays, perfect for digital signage and ESP32 devices.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <h3>Secure & Private</h3>
+            <p>Your ads are stored securely with Firebase. Only you can access your saved content.</p>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <h2>Ready to Get Started?</h2>
+        <p>Join thousands of users creating professional ads every day</p>
+        <a href="/my-ads.html" class="btn-primary" style="font-size: 1.2em; padding: 15px 50px;">View My Ads</a>
+    </section>
+
+    <!-- Footer -->
+    <footer style="text-align: center; padding: 40px 20px; background: var(--tmobile-black); margin-top: 80px; border-top: 1px solid var(--tmobile-gray);">
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                <div style="color: var(--tmobile-light-gray); font-size: 0.9em;">
+                    © 2024 T-Mobile Ad System. All rights reserved.
+                </div>
+                <div>
+                    <a href="/admin-login.html" style="color: var(--tmobile-gray); text-decoration: none; font-size: 0.85em; padding: 8px 16px; border: 1px solid var(--tmobile-gray); border-radius: 20px; transition: all 0.3s ease;" onmouseover="this.style.borderColor='var(--tmobile-magenta)'; this.style.color='var(--tmobile-magenta)';" onmouseout="this.style.borderColor='var(--tmobile-gray)'; this.style.color='var(--tmobile-gray)';">
+                        👑 Admin Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Load Auth Script -->
+    <script type="module" src="/js/auth.js"></script>
+</body>
+</html>

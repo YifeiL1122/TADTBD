@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Biddings - T-Mobile Ad System</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .my-biddings-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .page-header {
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-header-content h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .page-header-content p {
+            color: var(--tmobile-light-gray);
+            font-size: 1.1em;
+        }
+
+        .biddings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .bidding-card {
+            background: var(--tmobile-dark-gray);
+            border: 2px solid var(--tmobile-gray);
+            border-radius: 16px;
+            padding: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .bidding-card:hover {
+            border-color: var(--tmobile-magenta);
+            box-shadow: 0 5px 20px rgba(226, 0, 116, 0.2);
+        }
+
+        .bidding-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 20px;
+        }
+
+        .bidding-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .bidding-status {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: rgba(255, 140, 0, 0.2);
+            color: var(--warning-orange);
+        }
+
+        .status-active {
+            background: rgba(0, 214, 89, 0.2);
+            color: var(--success-green);
+        }
+
+        .status-completed {
+            background: rgba(100, 100, 100, 0.2);
+            color: var(--tmobile-light-gray);
+        }
+
+        .bidding-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .detail-label {
+            font-size: 0.85em;
+            color: var(--tmobile-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--tmobile-white);
+        }
+
+        .bidding-ad-preview {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+            padding: 15px;
+            background: var(--tmobile-black);
+            border-radius: 12px;
+        }
+
+        .ad-thumbnail {
+            width: 80px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid var(--tmobile-gray);
+        }
+
+        .ad-preview-info h4 {
+            font-size: 1em;
+            margin-bottom: 5px;
+        }
+
+        .ad-preview-info p {
+            font-size: 0.85em;
+            color: var(--tmobile-light-gray);
+        }
+
+        .bidding-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-secondary {
+            background: var(--tmobile-gray);
+            color: var(--tmobile-white);
+        }
+
+        .btn-secondary:hover {
+            background: var(--tmobile-light-gray);
+        }
+
+        .btn-danger {
+            background: transparent;
+            border: 2px solid #f00;
+            color: #f00;
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 0, 0, 0.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--tmobile-light-gray);
+        }
+
+        .empty-state h2 {
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: var(--tmobile-white);
+        }
+
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 20px;
+            }
+
+            .bidding-details {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">
+                <div>
+                    <div class="navbar-logo">T-Mobile</div>
+                    <div class="navbar-tagline">Ad System</div>
+                </div>
+            </a>
+            <ul class="navbar-menu">
+                <li><a href="/" class="navbar-link">Home</a></li>
+                <li><a href="/my-ads.html" class="navbar-link">My Ads</a></li>
+                <li><a href="/my-biddings.html" class="navbar-link active">My Biddings</a></li>
+            </ul>
+            <div class="user-info">
+                <span class="user-display"></span>
+                <a href="/login.html" class="btn-nav-login">Login</a>
+                <button class="btn-nav-logout" onclick="signOutUser()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="my-biddings-container">
+        <div class="page-header">
+            <div class="page-header-content">
+                <h1>My Biddings</h1>
+                <p>Manage and track all your advertising campaigns</p>
+            </div>
+            <a href="/bidding.html" class="btn-primary">+ Create New Bidding</a>
+        </div>
+
+        <div class="biddings-list" id="biddingsList">
+            <!-- Biddings will be loaded by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Load Auth Script -->
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/my-biddings.js"></script>
+</body>
+</html>

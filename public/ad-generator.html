@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-Mobile Ad Generator</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/ad-generator.css">
+    <style>
+        /* Adjust layout for navbar */
+        body {
+            padding-top: 0;
+        }
+
+        .app-container {
+            margin-top: 0;
+        }
+
+        /* Auth status indicator */
+        .auth-status {
+            padding: 10px 20px;
+            background: rgba(0, 214, 89, 0.1);
+            border-left: 4px solid var(--success-green);
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+
+        .auth-status.not-logged-in {
+            background: rgba(255, 140, 0, 0.1);
+            border-left-color: var(--warning-orange);
+        }
+
+        .auth-status strong {
+            color: var(--success-green);
+        }
+
+        .auth-status.not-logged-in strong {
+            color: var(--warning-orange);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">
+                <div>
+                    <div class="navbar-logo">T-Mobile</div>
+                    <div class="navbar-tagline">Ad System</div>
+                </div>
+            </a>
+            <ul class="navbar-menu">
+                <li><a href="/" class="navbar-link">Home</a></li>
+                <li><a href="/my-ads.html" class="navbar-link">My Ads</a></li>
+                <li><a href="/my-biddings.html" class="navbar-link">My Biddings</a></li>
+            </ul>
+            <div class="user-info">
+                <span class="user-display"></span>
+                <a href="/login.html" class="btn-nav-login">Login</a>
+                <button class="btn-nav-logout" onclick="signOutUser()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Generator Tools</h1>
+                <div id="authStatus" class="auth-status not-logged-in">
+                    <strong>⚠️ Not logged in</strong> - Sign in to save your ads to the cloud
+                </div>
+            </div>
+
+            <div class="controls">
+                <!-- Template Selection -->
+                <section class="control-section">
+                    <h3>Select Template</h3>
+                    <div class="template-selector">
+                        <div class="template-option active" data-template="modern" onclick="selectTemplate('modern')">
+                            <div class="template-preview template-modern-preview"></div>
+                            <span>Modern Gradient</span>
+                        </div>
+                        <div class="template-option" data-template="professional" onclick="selectTemplate('professional')">
+                            <div class="template-preview template-professional-preview"></div>
+                            <span>Professional Split</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Color Selector -->
+                <section class="control-section">
+                    <h3>Color Theme</h3>
+                    <div class="color-selector">
+                        <div class="color-option active" data-color="pink" onclick="selectColor('pink')">
+                            <div class="color-option-swatch"></div>
+                            <div class="color-option-label">Pink</div>
+                        </div>
+                        <div class="color-option" data-color="blue" onclick="selectColor('blue')">
+                            <div class="color-option-swatch"></div>
+                            <div class="color-option-label">Blue</div>
+                        </div>
+                        <div class="color-option" data-color="green" onclick="selectColor('green')">
+                            <div class="color-option-swatch"></div>
+                            <div class="color-option-label">Green</div>
+                        </div>
+                        <div class="color-option" data-color="orange" onclick="selectColor('orange')">
+                            <div class="color-option-swatch"></div>
+                            <div class="color-option-label">Orange</div>
+                        </div>
+                        <div class="color-option" data-color="purple" onclick="selectColor('purple')">
+                            <div class="color-option-swatch"></div>
+                            <div class="color-option-label">Purple</div>
+                        </div>
+                        <div class="color-option" data-color="red" onclick="selectColor('red')">
+                            <div class="color-option-swatch"></div>
+                            <div class="color-option-label">Red</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Logo Upload -->
+                <section class="control-section">
+                    <h3>Logo</h3>
+                    <div class="upload-area" id="logoUploadArea" onclick="document.getElementById('logoInput').click()">
+                        <input type="file" id="logoInput" accept="image/*" hidden onchange="handleLogoUpload(event)">
+                        <div class="upload-placeholder" id="logoPlaceholder">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p>Upload Logo</p>
+                        </div>
+                        <img id="logoPreview" class="logo-preview" style="display: none;">
+                    </div>
+                </section>
+
+                <!-- Ad Name Input -->
+                <section class="control-section">
+                    <h3>Ad Name</h3>
+                    <input
+                        type="text"
+                        id="adNameInput"
+                        placeholder="Give your ad a name (e.g., Summer Sale 2024)"
+                        maxlength="50"
+                        oninput="updateNameCount()"
+                    >
+                    <div class="char-count">
+                        <span id="nameCount">0</span> / 50
+                    </div>
+                </section>
+
+                <!-- Slogan Input -->
+                <section class="control-section">
+                    <h3>Slogan</h3>
+                    <input
+                        type="text"
+                        id="sloganInput"
+                        placeholder="Enter your catchy slogan..."
+                        maxlength="80"
+                        oninput="updateSlogan()"
+                        onkeyup="updateSlogan()"
+                    >
+                    <div class="char-count">
+                        <span id="sloganCount">0</span> / 80
+                    </div>
+                </section>
+
+                <!-- Description Input -->
+                <section class="control-section">
+                    <h3>Description</h3>
+                    <textarea
+                        id="descriptionInput"
+                        rows="4"
+                        placeholder="Enter detailed description..."
+                        maxlength="200"
+                        oninput="updateDescription()"
+                        onkeyup="updateDescription()"
+                    ></textarea>
+                    <div class="char-count">
+                        <span id="descCount">0</span> / 200
+                    </div>
+                </section>
+
+                <!-- Action Buttons -->
+                <section class="control-section">
+                    <button class="btn-primary" id="downloadBtn" onclick="downloadAd()">
+                        Download Ad
+                    </button>
+                    <button class="btn-primary" id="saveBtn" onclick="saveToFirebase()">
+                        Save to Cloud
+                    </button>
+                    <button class="btn-secondary" id="resetBtn" onclick="resetForm()">Reset</button>
+                </section>
+
+                <!-- My Saved Ads -->
+                <section class="control-section">
+                    <h3>My Saved Ads</h3>
+                    <div id="savedAdsList" class="saved-ads-list">
+                        <p class="empty-message">Sign in to view saved ads</p>
+                    </div>
+                </section>
+            </div>
+        </aside>
+
+        <!-- Canvas Area -->
+        <main class="canvas-area">
+            <div class="canvas-header">
+                <h2>Preview</h2>
+                <div class="canvas-info">
+                    <span id="canvasSize">240 × 320 px</span>
+                </div>
+            </div>
+
+            <div class="canvas-wrapper">
+                <div class="canvas-container">
+                    <!-- Ad Canvas -->
+                    <div id="adCanvas" class="ad-canvas template-modern">
+                        <!-- Modern Template -->
+                        <div class="template modern-template" id="modernTemplate" data-template="modern">
+                            <div class="template-bg"></div>
+                            <div class="template-content">
+                                <img class="template-logo" id="modernLogo" src="" alt="Logo" style="display: none;">
+                                <h1 class="template-slogan" id="modernSlogan">Your Slogan Here</h1>
+                                <p class="template-description" id="modernDesc">Add your detailed description to bring your message to life.</p>
+                            </div>
+                        </div>
+
+                        <!-- Professional Template -->
+                        <div class="template professional-template" id="professionalTemplate" data-template="professional" style="display: none;">
+                            <div class="template-left">
+                                <div class="professional-content">
+                                    <img class="template-logo" id="professionalLogo" src="" alt="Logo" style="display: none;">
+                                    <h1 class="template-slogan" id="professionalSlogan">Your Slogan Here</h1>
+                                    <p class="template-description" id="professionalDesc">Add your detailed description to bring your message to life.</p>
+                                </div>
+                            </div>
+                            <div class="template-right"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- html2canvas -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+    <!-- Application Scripts -->
+    <script type="module" src="/js/ad-generator.js"></script>
+</body>
+</html>

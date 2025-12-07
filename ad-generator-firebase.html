@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-Mobile Ad Generator with Firebase</title>
+    <link rel="stylesheet" href="ad-generator.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>T-Mobile</h1>
+                <p>Ad Generator</p>
+            </div>
+
+            <div class="controls">
+                <!-- Template Selection -->
+                <section class="control-section">
+                    <h3>Select Template</h3>
+                    <div class="template-selector">
+                        <div class="template-option active" data-template="modern" onclick="selectTemplate('modern')">
+                            <div class="template-preview template-modern-preview"></div>
+                            <span>Modern Gradient</span>
+                        </div>
+                        <div class="template-option" data-template="professional" onclick="selectTemplate('professional')">
+                            <div class="template-preview template-professional-preview"></div>
+                            <span>Professional Split</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Color Selector -->
+                <section class="control-section">
+                    <h3>Color Theme</h3>
+                    <div class="color-selector">
+                        <div class="color-option active" data-color="pink" onclick="selectColor('pink')">
+                            <div class="color-option-swatch"></div>
+                            <div class="color-option-label">Pink</div>
+                        </div>
+                        <div class="color-option" data-color="blue" onclick="selectColor('blue')">
+                            <div class="color-option-swatch"></div>
+                            <div class="color-option-label">Blue</div>
+                        </div>
+                        <div class="color-option" data-color="green" onclick="selectColor('green')">
+                            <div class="color-option-swatch"></div>
+                            <div class="color-option-label">Green</div>
+                        </div>
+                        <div class="color-option" data-color="orange" onclick="selectColor('orange')">
+                            <div class="color-option-swatch"></div>
+                            <div class="color-option-label">Orange</div>
+                        </div>
+                        <div class="color-option" data-color="purple" onclick="selectColor('purple')">
+                            <div class="color-option-swatch"></div>
+                            <div class="color-option-label">Purple</div>
+                        </div>
+                        <div class="color-option" data-color="red" onclick="selectColor('red')">
+                            <div class="color-option-swatch"></div>
+                            <div class="color-option-label">Red</div>
+                        </div>
+                    </div>
+
+                    <!-- Background Preview Toggle -->
+                    <div class="background-preview-container">
+                        <div class="background-preview-toggle">
+                            <input type="checkbox" id="showBackgroundToggle" onchange="toggleBackground()">
+                            <label for="showBackgroundToggle">Show Preview Background</label>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Logo Upload -->
+                <section class="control-section">
+                    <h3>Logo</h3>
+                    <div class="upload-area" id="logoUploadArea" onclick="document.getElementById('logoInput').click()">
+                        <input type="file" id="logoInput" accept="image/*" hidden onchange="handleLogoUpload(event)">
+                        <div class="upload-placeholder" id="logoPlaceholder">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p>Upload Logo</p>
+                        </div>
+                        <img id="logoPreview" class="logo-preview" style="display: none;">
+                    </div>
+                    <button class="btn-secondary btn-small" onclick="document.getElementById('logoInput').click()">
+                        Choose File
+                    </button>
+                </section>
+
+                <!-- Slogan Input -->
+                <section class="control-section">
+                    <h3>Slogan</h3>
+                    <input
+                        type="text"
+                        id="sloganInput"
+                        placeholder="Enter your catchy slogan..."
+                        maxlength="80"
+                        oninput="updateSlogan()"
+                        onkeyup="updateSlogan()"
+                    >
+                    <div class="char-count">
+                        <span id="sloganCount">0</span> / 80
+                    </div>
+                </section>
+
+                <!-- Description Input -->
+                <section class="control-section">
+                    <h3>Description</h3>
+                    <textarea
+                        id="descriptionInput"
+                        rows="4"
+                        placeholder="Enter detailed description..."
+                        maxlength="200"
+                        oninput="updateDescription()"
+                        onkeyup="updateDescription()"
+                    ></textarea>
+                    <div class="char-count">
+                        <span id="descCount">0</span> / 200
+                    </div>
+                </section>
+
+                <!-- Action Buttons -->
+                <section class="control-section">
+                    <button class="btn-primary" id="downloadBtn" onclick="downloadAd()">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download Ad
+                    </button>
+                    <button class="btn-primary" id="saveBtn" onclick="saveToFirebase()">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        Save to Cloud
+                    </button>
+                    <button class="btn-secondary" id="resetBtn" onclick="resetForm()">Reset</button>
+                </section>
+
+                <!-- My Saved Ads -->
+                <section class="control-section">
+                    <h3>My Saved Ads</h3>
+                    <div id="savedAdsList" class="saved-ads-list">
+                        <p class="empty-message">Loading...</p>
+                    </div>
+                </section>
+            </div>
+        </aside>
+
+        <!-- Canvas Area -->
+        <main class="canvas-area">
+            <div class="canvas-header">
+                <h2>Preview</h2>
+                <div class="canvas-info">
+                    <span id="canvasSize">240 × 320 px</span>
+                    <span id="firebaseStatus" style="margin-left: 20px; color: #666;"></span>
+                </div>
+            </div>
+
+            <div class="canvas-wrapper">
+                <div class="canvas-container">
+                    <!-- Ad Canvas -->
+                    <div id="adCanvas" class="ad-canvas template-modern">
+                        <!-- Modern Template -->
+                        <div class="template modern-template" id="modernTemplate" data-template="modern">
+                            <div class="template-bg"></div>
+                            <div class="template-content">
+                                <img class="template-logo" id="modernLogo" src="" alt="Logo" style="display: none;">
+                                <h1 class="template-slogan" id="modernSlogan">Your Slogan Here</h1>
+                                <p class="template-description" id="modernDesc">Add your detailed description to bring your message to life.</p>
+                            </div>
+                        </div>
+
+                        <!-- Professional Template -->
+                        <div class="template professional-template" id="professionalTemplate" data-template="professional" style="display: none;">
+                            <div class="template-left">
+                                <div class="professional-content">
+                                    <img class="template-logo" id="professionalLogo" src="" alt="Logo" style="display: none;">
+                                    <h1 class="template-slogan" id="professionalSlogan">Your Slogan Here</h1>
+                                    <p class="template-description" id="professionalDesc">Add your detailed description to bring your message to life.</p>
+                                </div>
+                            </div>
+                            <div class="template-right"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDK - Compatibility version (non-module) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+    <!-- html2canvas -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+    <script>
+        // Global state
+        let currentTemplate = 'modern';
+        let currentLogoData = null;
+        let db = null;
+        let storage = null;
+        let firebaseInitialized = false;
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB1OFLCXnfwxm4Fm3TjEpDpTK68Dv5ww10",
+            authDomain: "tadtbd.firebaseapp.com",
+            databaseURL: "https://tadtbd-default-rtdb.firebaseio.com",
+            projectId: "tadtbd",
+            storageBucket: "tadtbd.firebasestorage.app",
+            messagingSenderId: "646836878345",
+            appId: "1:646836878345:web:49cd49363c525387cf4cd8",
+            measurementId: "G-G46P9895LW"
+        };
+
+        // Initialize Firebase
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            storage = firebase.storage();
+            firebaseInitialized = true;
+            console.log('✅ Firebase initialized successfully');
+            document.getElementById('firebaseStatus').textContent = '☁️ Connected';
+            document.getElementById('firebaseStatus').style.color = '#00D659';
+        } catch (error) {
+            console.error('❌ Firebase initialization error:', error);
+            document.getElementById('firebaseStatus').textContent = '⚠️ Not connected';
+            document.getElementById('firebaseStatus').style.color = '#FF8C00';
+        }
+
+        // Initialize on page load
+        window.onload = function() {
+            console.log('✅ Page loaded successfully');
+            updateSlogan();
+            updateDescription();
+
+            if (firebaseInitialized) {
+                loadSavedAds();
+            } else {
+                document.getElementById('savedAdsList').innerHTML =
+                    '<p class="empty-message">Firebase not configured</p>';
+            }
+        };
+
+        // Select Color
+        function selectColor(colorName) {
+            console.log('Color selected:', colorName);
+
+            // Update data-theme attribute on root element
+            document.documentElement.setAttribute('data-theme', colorName);
+
+            // Update active state
+            document.querySelectorAll('.color-option').forEach(function(option) {
+                option.classList.remove('active');
+            });
+            document.querySelector('.color-option[data-color="' + colorName + '"]').classList.add('active');
+
+            // Update template previews
+            updateTemplatePreviews();
+        }
+
+        // Update template preview colors
+        function updateTemplatePreviews() {
+            // Template previews will automatically update via CSS variables
+            console.log('Template previews updated with new color theme');
+        }
+
+        // Toggle Background Preview
+        function toggleBackground() {
+            const checkbox = document.getElementById('showBackgroundToggle');
+            const canvasContainer = document.querySelector('.canvas-container');
+
+            if (checkbox.checked) {
+                canvasContainer.classList.add('with-background');
+                canvasContainer.style.backgroundImage = "url('background-preview.png')";
+                console.log('Background preview enabled');
+            } else {
+                canvasContainer.classList.remove('with-background');
+                canvasContainer.style.backgroundImage = '';
+                console.log('Background preview disabled');
+            }
+        }
+
+        // Select Template
+        function selectTemplate(templateName) {
+            console.log('Switching to template:', templateName);
+            currentTemplate = templateName;
+
+            // Update active class
+            document.querySelectorAll('.template-option').forEach(opt => {
+                opt.classList.remove('active');
+            });
+            document.querySelector('[data-template="' + templateName + '"]').classList.add('active');
+
+            // Show/hide templates
+            document.getElementById('modernTemplate').style.display =
+                templateName === 'modern' ? 'flex' : 'none';
+            document.getElementById('professionalTemplate').style.display =
+                templateName === 'professional' ? 'flex' : 'none';
+
+            console.log('✅ Template switched to:', templateName);
+        }
+
+        // Handle Logo Upload
+        function handleLogoUpload(event) {
+            console.log('Logo upload triggered');
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file!');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentLogoData = e.target.result;
+
+                // Show in sidebar
+                document.getElementById('logoPlaceholder').style.display = 'none';
+                const preview = document.getElementById('logoPreview');
+                preview.src = currentLogoData;
+                preview.style.display = 'block';
+
+                // Show in templates
+                const modernLogo = document.getElementById('modernLogo');
+                const professionalLogo = document.getElementById('professionalLogo');
+
+                modernLogo.src = currentLogoData;
+                modernLogo.style.display = 'block';
+                professionalLogo.src = currentLogoData;
+                professionalLogo.style.display = 'block';
+
+                console.log('✅ Logo uploaded successfully');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Update Slogan
+        function updateSlogan() {
+            const input = document.getElementById('sloganInput');
+            const count = document.getElementById('sloganCount');
+            const modernSlogan = document.getElementById('modernSlogan');
+            const professionalSlogan = document.getElementById('professionalSlogan');
+
+            const text = input.value || 'Your Slogan Here';
+            const length = input.value.length;
+
+            count.textContent = length;
+            modernSlogan.textContent = text;
+            professionalSlogan.textContent = text;
+
+            console.log('Slogan updated:', text, 'Length:', length);
+        }
+
+        // Update Description
+        function updateDescription() {
+            const input = document.getElementById('descriptionInput');
+            const count = document.getElementById('descCount');
+            const modernDesc = document.getElementById('modernDesc');
+            const professionalDesc = document.getElementById('professionalDesc');
+
+            const text = input.value || 'Add your detailed description to bring your message to life.';
+            const length = input.value.length;
+
+            count.textContent = length;
+            modernDesc.textContent = text;
+            professionalDesc.textContent = text;
+
+            console.log('Description updated:', text.substring(0, 30) + '...', 'Length:', length);
+        }
+
+        // Download Ad
+        function downloadAd() {
+            console.log('Starting download...');
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.textContent = 'Generating...';
+            downloadBtn.disabled = true;
+
+            const canvas = document.getElementById('adCanvas');
+
+            html2canvas(canvas, {
+                backgroundColor: null,
+                scale: 2,
+                width: 240,
+                height: 320,
+                useCORS: true,
+                allowTaint: true
+            }).then(function(canvasImage) {
+                const link = document.createElement('a');
+                link.download = 'tmobile-ad-' + Date.now() + '.png';
+                link.href = canvasImage.toDataURL('image/png');
+                link.click();
+
+                downloadBtn.innerHTML = `
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download Ad
+                `;
+                downloadBtn.disabled = false;
+
+                console.log('✅ Download successful!');
+                alert('Ad downloaded successfully!');
+            }).catch(function(error) {
+                console.error('Download error:', error);
+                alert('Failed to download ad. Please try again.');
+                downloadBtn.disabled = false;
+            });
+        }
+
+        // Save to Firebase
+        function saveToFirebase() {
+            if (!firebaseInitialized) {
+                alert('Firebase is not connected. Please check your configuration.');
+                return;
+            }
+
+            const sloganInput = document.getElementById('sloganInput');
+            if (!sloganInput.value.trim()) {
+                alert('Please enter a slogan before saving!');
+                return;
+            }
+
+            console.log('☁️ Saving to Firebase...');
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.textContent = 'Saving...';
+            saveBtn.disabled = true;
+
+            const canvas = document.getElementById('adCanvas');
+
+            html2canvas(canvas, {
+                backgroundColor: null,
+                scale: 2,
+                width: 240,
+                height: 320,
+                useCORS: true,
+                allowTaint: true
+            }).then(function(canvasImage) {
+                const imageData = canvasImage.toDataURL('image/png');
+                const timestamp = Date.now();
+
+                // Upload to Firebase Storage
+                const storageRef = storage.ref('ads/' + timestamp + '.png');
+                return storageRef.putString(imageData, 'data_url').then(function(snapshot) {
+                    return snapshot.ref.getDownloadURL();
+                }).then(function(imageUrl) {
+                    // Save metadata to Firestore
+                    return db.collection('ads').add({
+                        slogan: sloganInput.value,
+                        description: document.getElementById('descriptionInput').value,
+                        template: currentTemplate,
+                        logoData: currentLogoData,
+                        imageUrl: imageUrl,
+                        createdAt: new Date().toISOString(),
+                        timestamp: timestamp
+                    });
+                });
+            }).then(function() {
+                saveBtn.innerHTML = `
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Save to Cloud
+                `;
+                saveBtn.disabled = false;
+
+                console.log('✅ Saved to Firebase successfully!');
+                alert('Ad saved to cloud successfully!');
+                loadSavedAds();
+            }).catch(function(error) {
+                console.error('❌ Save error:', error);
+                alert('Failed to save ad: ' + error.message);
+                saveBtn.disabled = false;
+            });
+        }
+
+        // Load Saved Ads
+        function loadSavedAds() {
+            if (!firebaseInitialized) return;
+
+            console.log('📂 Loading saved ads...');
+            const savedAdsList = document.getElementById('savedAdsList');
+
+            db.collection('ads').orderBy('timestamp', 'desc').get()
+                .then(function(querySnapshot) {
+                    if (querySnapshot.empty) {
+                        savedAdsList.innerHTML = '<p class="empty-message">No saved ads yet</p>';
+                        return;
+                    }
+
+                    let html = '';
+                    querySnapshot.forEach(function(doc) {
+                        const data = doc.data();
+                        const date = new Date(data.createdAt).toLocaleDateString('en-US');
+
+                        html += `
+                            <div class="saved-ad-item" onclick="loadAd('${doc.id}', ${JSON.stringify(data).replace(/"/g, '&quot;')})">
+                                <div class="saved-ad-title">${data.slogan || 'Untitled'}</div>
+                                <div class="saved-ad-date">${date}</div>
+                            </div>
+                        `;
+                    });
+
+                    savedAdsList.innerHTML = html;
+                    console.log('✅ Loaded saved ads successfully');
+                })
+                .catch(function(error) {
+                    console.error('❌ Error loading saved ads:', error);
+                    savedAdsList.innerHTML = '<p class="empty-message">Error loading ads</p>';
+                });
+        }
+
+        // Load Ad
+        function loadAd(id, data) {
+            console.log('📥 Loading ad:', id);
+
+            document.getElementById('sloganInput').value = data.slogan || '';
+            document.getElementById('descriptionInput').value = data.description || '';
+
+            if (data.logoData) {
+                currentLogoData = data.logoData;
+                document.getElementById('logoPlaceholder').style.display = 'none';
+                const preview = document.getElementById('logoPreview');
+                preview.src = currentLogoData;
+                preview.style.display = 'block';
+            }
+
+            selectTemplate(data.template || 'modern');
+            updateSlogan();
+            updateDescription();
+        }
+
+        // Reset Form
+        function resetForm() {
+            if (!confirm('Are you sure you want to reset? All unsaved changes will be lost.')) {
+                return;
+            }
+
+            document.getElementById('sloganInput').value = '';
+            document.getElementById('descriptionInput').value = '';
+            document.getElementById('logoInput').value = '';
+
+            document.getElementById('logoPlaceholder').style.display = 'flex';
+            document.getElementById('logoPreview').style.display = 'none';
+
+            document.getElementById('modernLogo').src = '';
+            document.getElementById('modernLogo').style.display = 'none';
+            document.getElementById('professionalLogo').src = '';
+            document.getElementById('professionalLogo').style.display = 'none';
+
+            currentLogoData = null;
+
+            updateSlogan();
+            updateDescription();
+
+            console.log('✅ Form reset complete');
+        }
+    </script>
+</body>
+</html>

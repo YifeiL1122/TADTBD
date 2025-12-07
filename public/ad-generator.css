@@ -1,0 +1,678 @@
+/* T-Mobile Brand Colors */
+:root {
+    --tmobile-magenta: #E20074;
+    --tmobile-dark-magenta: #A8005A;
+    --tmobile-light-magenta: #FF2D92;
+    --tmobile-black: #000000;
+    --tmobile-dark-gray: #1F1F1F;
+    --tmobile-gray: #666666;
+    --tmobile-light-gray: #E5E5E5;
+    --tmobile-white: #FFFFFF;
+    --success-green: #00D659;
+
+    /* Color Theme Variables (default: pink) */
+    --theme-primary: #E20074;
+    --theme-dark: #A8005A;
+    --theme-light: #FF2D92;
+}
+
+/* Color Presets */
+:root[data-theme="pink"] {
+    --theme-primary: #E20074;
+    --theme-dark: #A8005A;
+    --theme-light: #FF2D92;
+}
+
+:root[data-theme="blue"] {
+    --theme-primary: #0074E2;
+    --theme-dark: #005AB8;
+    --theme-light: #4A9EFF;
+}
+
+:root[data-theme="green"] {
+    --theme-primary: #00C853;
+    --theme-dark: #009641;
+    --theme-light: #5EFC82;
+}
+
+:root[data-theme="orange"] {
+    --theme-primary: #FF6D00;
+    --theme-dark: #C43E00;
+    --theme-light: #FF9E40;
+}
+
+:root[data-theme="purple"] {
+    --theme-primary: #7C4DFF;
+    --theme-dark: #5E35B1;
+    --theme-light: #B085FF;
+}
+
+:root[data-theme="red"] {
+    --theme-primary: #E53935;
+    --theme-dark: #C62828;
+    --theme-light: #EF5350;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--tmobile-black);
+    color: var(--tmobile-white);
+    overflow: hidden;
+}
+
+/* App Layout */
+.app-container {
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 380px;
+    background: var(--tmobile-dark-gray);
+    border-right: 2px solid var(--tmobile-magenta);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.sidebar-header {
+    background: linear-gradient(135deg, var(--tmobile-magenta) 0%, var(--tmobile-dark-magenta) 100%);
+    padding: 30px;
+    border-bottom: 3px solid var(--tmobile-light-magenta);
+}
+
+.sidebar-header h1 {
+    font-size: 2em;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.sidebar-header p {
+    opacity: 0.9;
+    font-size: 1em;
+}
+
+.controls {
+    padding: 30px;
+    flex: 1;
+}
+
+.control-section {
+    margin-bottom: 30px;
+}
+
+.control-section h3 {
+    color: var(--tmobile-light-magenta);
+    font-size: 1.1em;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+/* Template Selector */
+.template-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.template-option {
+    cursor: pointer;
+    border: 2px solid var(--tmobile-gray);
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: var(--tmobile-black);
+}
+
+.template-option:hover {
+    border-color: var(--tmobile-magenta);
+    transform: translateY(-3px);
+}
+
+.template-option.active {
+    border-color: var(--tmobile-magenta);
+    background: rgba(226, 0, 116, 0.1);
+    box-shadow: 0 0 15px rgba(226, 0, 116, 0.3);
+}
+
+.template-preview {
+    width: 100%;
+    height: 100px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.template-modern-preview {
+    background: linear-gradient(135deg, var(--theme-primary), var(--theme-light));
+}
+
+.template-professional-preview {
+    background: linear-gradient(180deg, var(--tmobile-black) 65%, var(--theme-primary) 35%);
+}
+
+.template-option span {
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+/* Upload Area */
+.upload-area {
+    border: 2px dashed var(--tmobile-gray);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--tmobile-black);
+    margin-bottom: 10px;
+}
+
+.upload-area:hover {
+    border-color: var(--tmobile-magenta);
+    background: rgba(226, 0, 116, 0.05);
+}
+
+.upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.upload-icon {
+    width: 40px;
+    height: 40px;
+    color: var(--tmobile-magenta);
+    margin-bottom: 10px;
+}
+
+.upload-placeholder p {
+    color: var(--tmobile-light-gray);
+    font-size: 0.9em;
+}
+
+.logo-preview {
+    max-width: 100%;
+    max-height: 120px;
+    border-radius: 8px;
+    object-fit: contain;
+}
+
+/* Form Inputs */
+input[type="text"],
+textarea {
+    width: 100%;
+    padding: 12px;
+    background: var(--tmobile-black);
+    border: 2px solid var(--tmobile-gray);
+    border-radius: 8px;
+    color: var(--tmobile-white);
+    font-size: 1em;
+    font-family: inherit;
+    transition: all 0.3s ease;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--tmobile-magenta);
+    box-shadow: 0 0 0 3px rgba(226, 0, 116, 0.2);
+}
+
+textarea {
+    resize: vertical;
+}
+
+.char-count {
+    text-align: right;
+    font-size: 0.85em;
+    color: var(--tmobile-gray);
+    margin-top: 5px;
+}
+
+.char-count span {
+    color: var(--tmobile-magenta);
+    font-weight: 600;
+}
+
+/* Buttons */
+.btn-primary,
+.btn-secondary {
+    width: 100%;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 25px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.btn-primary {
+    background: var(--tmobile-magenta);
+    color: var(--tmobile-white);
+}
+
+.btn-primary:hover {
+    background: var(--tmobile-light-magenta);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(226, 0, 116, 0.4);
+}
+
+.btn-secondary {
+    background: var(--tmobile-gray);
+    color: var(--tmobile-white);
+}
+
+.btn-secondary:hover {
+    background: var(--tmobile-black);
+    border: 2px solid var(--tmobile-magenta);
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 0.9em;
+}
+
+.btn-icon {
+    width: 20px;
+    height: 20px;
+}
+
+/* Saved Ads List */
+.saved-ads-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.saved-ad-item {
+    background: var(--tmobile-black);
+    border: 1px solid var(--tmobile-gray);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.saved-ad-item:hover {
+    border-color: var(--tmobile-magenta);
+    transform: translateX(5px);
+}
+
+.saved-ad-title {
+    font-weight: 600;
+    color: var(--tmobile-white);
+    margin-bottom: 5px;
+}
+
+.saved-ad-date {
+    font-size: 0.8em;
+    color: var(--tmobile-gray);
+}
+
+.empty-message {
+    text-align: center;
+    color: var(--tmobile-gray);
+    padding: 20px;
+    font-size: 0.9em;
+}
+
+/* Canvas Area */
+.canvas-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #0A0A0A;
+}
+
+.canvas-header {
+    padding: 20px 40px;
+    background: var(--tmobile-dark-gray);
+    border-bottom: 2px solid var(--tmobile-magenta);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.canvas-header h2 {
+    color: var(--tmobile-light-magenta);
+    font-size: 1.5em;
+}
+
+.canvas-info {
+    color: var(--tmobile-gray);
+    font-size: 0.9em;
+}
+
+.canvas-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    overflow: auto;
+}
+
+.canvas-container {
+    background: var(--tmobile-white);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+/* Ad Canvas */
+.ad-canvas {
+    width: 240px;
+    height: 320px;
+    position: relative;
+    background: var(--tmobile-white);
+}
+
+.template {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* Modern Template */
+.modern-template {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-template .template-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-light) 100%);
+}
+
+.modern-template .template-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 20px 15px;
+    width: 100%;
+}
+
+.modern-template .template-logo {
+    max-width: 80px;
+    max-height: 50px;
+    margin-bottom: 15px;
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3));
+    display: none;
+}
+
+.modern-template .template-logo[src]:not([src=""]) {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.modern-template .template-slogan {
+    font-size: 1.4em;
+    font-weight: 800;
+    color: var(--tmobile-white);
+    margin-bottom: 12px;
+    line-height: 1.2;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.modern-template .template-description {
+    font-size: 0.75em;
+    color: var(--tmobile-white);
+    line-height: 1.4;
+    opacity: 0.95;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Professional Template */
+.professional-template {
+    display: flex;
+    flex-direction: column;
+}
+
+.professional-template .template-left {
+    height: 65%;
+    background: var(--tmobile-black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 15px;
+}
+
+.professional-template .template-right {
+    height: 35%;
+    background: linear-gradient(135deg, var(--theme-primary), var(--theme-light));
+}
+
+.professional-content {
+    width: 100%;
+}
+
+.professional-template .template-logo {
+    max-width: 80px;
+    max-height: 50px;
+    margin-bottom: 15px;
+    display: none;
+}
+
+.professional-template .template-logo[src]:not([src=""]) {
+    display: block;
+}
+
+.professional-template .template-slogan {
+    font-size: 1.3em;
+    font-weight: 800;
+    color: var(--tmobile-white);
+    margin-bottom: 10px;
+    line-height: 1.2;
+}
+
+.professional-template .template-description {
+    font-size: 0.7em;
+    color: var(--tmobile-light-gray);
+    line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+    .ad-canvas {
+        transform: scale(1.5);
+        transform-origin: center;
+    }
+}
+
+@media (max-width: 1200px) {
+    .app-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        max-height: 50vh;
+    }
+
+    .canvas-area {
+        height: 50vh;
+    }
+
+    .ad-canvas {
+        transform: scale(1.2);
+    }
+}
+
+/* Scrollbar */
+.sidebar::-webkit-scrollbar,
+.saved-ads-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track,
+.saved-ads-list::-webkit-scrollbar-track {
+    background: var(--tmobile-black);
+}
+
+.sidebar::-webkit-scrollbar-thumb,
+.saved-ads-list::-webkit-scrollbar-thumb {
+    background: var(--tmobile-magenta);
+    border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover,
+.saved-ads-list::-webkit-scrollbar-thumb:hover {
+    background: var(--tmobile-light-magenta);
+}
+
+/* Color Selector */
+.color-selector {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.color-option {
+    width: 100%;
+    height: 60px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.color-option-swatch {
+    width: 100%;
+    height: 40px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    position: relative;
+    display: block;
+}
+
+.color-option:hover .color-option-swatch {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.color-option.active .color-option-swatch {
+    border: 3px solid var(--tmobile-white);
+    box-shadow: 0 0 0 2px var(--tmobile-black), 0 0 15px rgba(255, 255, 255, 0.5);
+}
+
+.color-option.active .color-option-swatch::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--tmobile-white);
+    font-size: 18px;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.color-option-label {
+    font-size: 0.7em;
+    color: var(--tmobile-light-gray);
+    text-align: center;
+    font-weight: 500;
+}
+
+.color-option.active .color-option-label {
+    color: var(--tmobile-white);
+    font-weight: 600;
+}
+
+/* Individual color options */
+.color-option[data-color="pink"] .color-option-swatch {
+    background: linear-gradient(135deg, #E20074, #FF2D92);
+}
+
+.color-option[data-color="blue"] .color-option-swatch {
+    background: linear-gradient(135deg, #0074E2, #4A9EFF);
+}
+
+.color-option[data-color="green"] .color-option-swatch {
+    background: linear-gradient(135deg, #00C853, #5EFC82);
+}
+
+.color-option[data-color="orange"] .color-option-swatch {
+    background: linear-gradient(135deg, #FF6D00, #FF9E40);
+}
+
+.color-option[data-color="purple"] .color-option-swatch {
+    background: linear-gradient(135deg, #7C4DFF, #B085FF);
+}
+
+.color-option[data-color="red"] .color-option-swatch {
+    background: linear-gradient(135deg, #E53935, #EF5350);
+}
+
+/* Background Preview */
+.background-preview-container {
+    margin-top: 15px;
+    padding: 15px;
+    background: var(--tmobile-black);
+    border: 2px solid var(--tmobile-gray);
+    border-radius: 8px;
+}
+
+.background-preview-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.background-preview-toggle label {
+    color: var(--tmobile-light-gray);
+    font-size: 0.9em;
+    cursor: pointer;
+    user-select: none;
+}
+
+.background-preview-toggle input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.canvas-container.with-background {
+    background-size: 200%;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: var(--tmobile-white);
+    transform: scale(1.8);
+    transform-origin: center;
+}
+
+.canvas-container.with-background .ad-canvas {
+    transform: scale(0.35);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}

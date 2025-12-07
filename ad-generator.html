@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-Mobile Ad Generator</title>
+    <link rel="stylesheet" href="ad-generator.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>T-Mobile</h1>
+                <p>Ad Generator</p>
+            </div>
+
+            <div class="controls">
+                <!-- Template Selection -->
+                <section class="control-section">
+                    <h3>Select Template</h3>
+                    <div class="template-selector">
+                        <div class="template-option active" data-template="modern">
+                            <div class="template-preview template-modern-preview"></div>
+                            <span>Modern Gradient</span>
+                        </div>
+                        <div class="template-option" data-template="professional">
+                            <div class="template-preview template-professional-preview"></div>
+                            <span>Professional Split</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Logo Upload -->
+                <section class="control-section">
+                    <h3>Logo</h3>
+                    <div class="upload-area" id="logoUploadArea">
+                        <input type="file" id="logoInput" accept="image/*" hidden>
+                        <div class="upload-placeholder" id="logoPlaceholder">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p>Upload Logo</p>
+                        </div>
+                        <img id="logoPreview" class="logo-preview" style="display: none;">
+                    </div>
+                    <button class="btn-secondary btn-small" onclick="document.getElementById('logoInput').click()">
+                        Choose File
+                    </button>
+                </section>
+
+                <!-- Slogan Input -->
+                <section class="control-section">
+                    <h3>Slogan</h3>
+                    <input
+                        type="text"
+                        id="sloganInput"
+                        placeholder="Enter your catchy slogan..."
+                        maxlength="80"
+                    >
+                    <div class="char-count">
+                        <span id="sloganCount">0</span> / 80
+                    </div>
+                </section>
+
+                <!-- Description Input -->
+                <section class="control-section">
+                    <h3>Description</h3>
+                    <textarea
+                        id="descriptionInput"
+                        rows="4"
+                        placeholder="Enter detailed description..."
+                        maxlength="200"
+                    ></textarea>
+                    <div class="char-count">
+                        <span id="descCount">0</span> / 200
+                    </div>
+                </section>
+
+                <!-- Action Buttons -->
+                <section class="control-section">
+                    <button class="btn-primary" id="downloadBtn">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download Ad
+                    </button>
+                    <button class="btn-primary" id="saveToFirebaseBtn">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        Save to Cloud
+                    </button>
+                    <button class="btn-secondary" id="resetBtn">Reset</button>
+                </section>
+
+                <!-- My Ads Section -->
+                <section class="control-section">
+                    <h3>My Saved Ads</h3>
+                    <div id="savedAdsList" class="saved-ads-list">
+                        <p class="empty-message">No saved ads yet</p>
+                    </div>
+                </section>
+            </div>
+        </aside>
+
+        <!-- Canvas Area -->
+        <main class="canvas-area">
+            <div class="canvas-header">
+                <h2>Preview</h2>
+                <div class="canvas-info">
+                    <span id="canvasSize">240 × 320 px</span>
+                </div>
+            </div>
+
+            <div class="canvas-wrapper">
+                <div class="canvas-container">
+                    <!-- Ad Canvas -->
+                    <div id="adCanvas" class="ad-canvas template-modern">
+                        <!-- Modern Template -->
+                        <div class="template modern-template" data-template="modern">
+                            <div class="template-bg"></div>
+                            <div class="template-content">
+                                <img class="template-logo" id="modernLogo" src="" alt="Logo">
+                                <h1 class="template-slogan" id="modernSlogan">Your Slogan Here</h1>
+                                <p class="template-description" id="modernDesc">Add your detailed description to bring your message to life.</p>
+                            </div>
+                        </div>
+
+                        <!-- Professional Template -->
+                        <div class="template professional-template" data-template="professional" style="display: none;">
+                            <div class="template-left">
+                                <div class="professional-content">
+                                    <img class="template-logo" id="professionalLogo" src="" alt="Logo">
+                                    <h1 class="template-slogan" id="professionalSlogan">Your Slogan Here</h1>
+                                    <p class="template-description" id="professionalDesc">Add your detailed description to bring your message to life.</p>
+                                </div>
+                            </div>
+                            <div class="template-right"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module" src="ad-generator.js"></script>
+</body>
+</html>

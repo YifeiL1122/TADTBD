@@ -1,0 +1,259 @@
+/* T-Mobile Brand Colors */
+:root {
+    --tmobile-magenta: #E20074;
+    --tmobile-dark-magenta: #A8005A;
+    --tmobile-light-magenta: #FF2D92;
+    --tmobile-black: #000000;
+    --tmobile-dark-gray: #1F1F1F;
+    --tmobile-gray: #666666;
+    --tmobile-light-gray: #E5E5E5;
+    --tmobile-white: #FFFFFF;
+    --success-green: #00D659;
+    --warning-orange: #FF8C00;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #1F1F1F 0%, #000000 100%);
+    color: var(--tmobile-white);
+    min-height: 100vh;
+    padding: 20px;
+    overflow-y: auto; /* Enable scrolling */
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: var(--tmobile-dark-gray);
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(226, 0, 116, 0.2);
+    overflow: hidden;
+}
+
+/* Header */
+.header {
+    background: linear-gradient(135deg, var(--tmobile-magenta) 0%, var(--tmobile-dark-magenta) 100%);
+    padding: 30px 40px;
+    border-bottom: 3px solid var(--tmobile-light-magenta);
+}
+
+.logo h1 {
+    font-size: 2.5em;
+    font-weight: 700;
+    margin-bottom: 5px;
+    letter-spacing: -1px;
+}
+
+.logo p {
+    font-size: 1em;
+    opacity: 0.9;
+    font-weight: 300;
+}
+
+.nav-tabs {
+    display: flex;
+    gap: 10px;
+    margin-top: 0; /* Reset margin for header alignment */
+}
+
+.tab-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid transparent;
+    color: var(--tmobile-white);
+    padding: 12px 30px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.tab-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.tab-btn.active {
+    background: var(--tmobile-white);
+    color: var(--tmobile-magenta);
+    font-weight: 600;
+}
+
+/* View Section & Routing */
+.view-section {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.view-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Auth Pages */
+.auth-container {
+    max-width: 400px;
+    margin: 50px auto;
+    background: var(--tmobile-dark-gray);
+    padding: 40px;
+    border-radius: 16px;
+    border: 2px solid var(--tmobile-magenta);
+    text-align: center;
+}
+
+.auth-input {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.google-btn {
+    background: white;
+    color: #333;
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.google-btn:hover {
+    background: #f1f1f1;
+    color: #000;
+}
+
+/* Ad Generator Integration */
+#ad-generator-view .app-container {
+    height: 800px; /* Fixed height for the tool area */
+    border: 1px solid var(--tmobile-gray);
+    border-top: none;
+    border-bottom: none;
+}
+
+/* Form Elements */
+.form-group {
+    margin-top: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--tmobile-white);
+    font-weight: 500;
+    font-size: 0.95em;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="password"],
+input[type="email"],
+textarea,
+select {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--tmobile-black);
+    border: 2px solid var(--tmobile-gray);
+    border-radius: 8px;
+    color: var(--tmobile-white);
+    font-size: 1em;
+    transition: all 0.3s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--tmobile-magenta);
+    box-shadow: 0 0 0 3px rgba(226, 0, 116, 0.2);
+}
+
+textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+
+/* Buttons */
+.btn-primary,
+.btn-secondary,
+.btn-danger {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 25px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-primary {
+    background: var(--tmobile-magenta);
+    color: var(--tmobile-white);
+}
+
+.btn-primary:hover {
+    background: var(--tmobile-light-magenta);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(226, 0, 116, 0.4);
+}
+
+.btn-secondary {
+    background: var(--tmobile-gray);
+    color: var(--tmobile-white);
+}
+
+.btn-secondary:hover {
+    background: var(--tmobile-black);
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background: #DC3545;
+    color: var(--tmobile-white);
+}
+
+.btn-danger:hover {
+    background: #C82333;
+    transform: translateY(-2px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header {
+        padding: 20px;
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .header > div {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .nav-tabs {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    #ad-generator-view .app-container {
+        height: auto;
+        flex-direction: column;
+    }
+}

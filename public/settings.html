@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Settings - T-Mobile Ad System</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .settings-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .page-header {
+            margin-bottom: 40px;
+        }
+
+        .page-header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .page-header p {
+            color: var(--tmobile-light-gray);
+            font-size: 1.1em;
+        }
+
+        .settings-card {
+            background: var(--tmobile-dark-gray);
+            border: 2px solid var(--tmobile-gray);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+        }
+
+        .settings-section {
+            margin-bottom: 30px;
+        }
+
+        .settings-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .settings-section h3 {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--tmobile-gray);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--tmobile-white);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--tmobile-black);
+            border: 2px solid var(--tmobile-gray);
+            border-radius: 8px;
+            color: var(--tmobile-white);
+            font-size: 1em;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--tmobile-magenta);
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-hint {
+            font-size: 0.85em;
+            color: var(--tmobile-gray);
+            margin-top: 5px;
+        }
+
+        .save-btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .user-info-display {
+            background: rgba(226, 0, 116, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid var(--tmobile-magenta);
+            margin-bottom: 30px;
+        }
+
+        .user-info-display strong {
+            color: var(--tmobile-magenta);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">
+                <div>
+                    <div class="navbar-logo">T-Mobile</div>
+                    <div class="navbar-tagline">Ad System</div>
+                </div>
+            </a>
+            <ul class="navbar-menu">
+                <li><a href="/" class="navbar-link">Home</a></li>
+                <li><a href="/my-ads.html" class="navbar-link">My Ads</a></li>
+                <li><a href="/my-biddings.html" class="navbar-link">My Biddings</a></li>
+            </ul>
+            <div class="user-info">
+                <span class="user-display"></span>
+                <a href="/login.html" class="btn-nav-login">Login</a>
+                <button class="btn-nav-logout" onclick="signOutUser()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="settings-container">
+        <div class="page-header">
+            <h1>Account Settings</h1>
+            <p>Manage your business information and preferences</p>
+        </div>
+
+        <!-- User Info Display -->
+        <div class="user-info-display">
+            <strong>Account:</strong> <span id="userEmail">Loading...</span>
+        </div>
+
+        <!-- Settings Form -->
+        <div class="settings-card">
+            <form id="settingsForm" onsubmit="event.preventDefault(); saveSettings();">
+                <!-- Business Information Section -->
+                <div class="settings-section">
+                    <h3>Business Information</h3>
+
+                    <div class="form-group">
+                        <label for="businessName">Business Name *</label>
+                        <input type="text" id="businessName" placeholder="Enter your business name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="businessType">Business Type *</label>
+                        <select id="businessType" required>
+                            <option value="">Select business type</option>
+                            <option value="retail">Retail Store</option>
+                            <option value="restaurant">Restaurant</option>
+                            <option value="service">Service Provider</option>
+                            <option value="healthcare">Healthcare</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="businessDescription">Business Description</label>
+                        <textarea id="businessDescription" placeholder="Brief description of your business (optional)"></textarea>
+                        <div class="form-hint">Tell us about your business to help us optimize your ad campaigns</div>
+                    </div>
+                </div>
+
+                <!-- Location Information Section -->
+                <div class="settings-section">
+                    <h3>Location Information</h3>
+
+                    <div class="form-group">
+                        <label for="storeAddress">Store Address *</label>
+                        <input type="text" id="storeAddress" placeholder="123 Main Street" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="city">City *</label>
+                        <input type="text" id="city" placeholder="Seattle" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="state">State *</label>
+                        <select id="state" required>
+                            <option value="">Select state</option>
+                            <option value="WA">Washington</option>
+                            <option value="CA">California</option>
+                            <option value="NY">New York</option>
+                            <option value="TX">Texas</option>
+                            <option value="FL">Florida</option>
+                            <option value="IL">Illinois</option>
+                            <option value="PA">Pennsylvania</option>
+                            <option value="OH">Ohio</option>
+                            <option value="GA">Georgia</option>
+                            <option value="NC">North Carolina</option>
+                            <option value="MI">Michigan</option>
+                            <option value="NJ">New Jersey</option>
+                            <option value="VA">Virginia</option>
+                            <option value="AZ">Arizona</option>
+                            <option value="MA">Massachusetts</option>
+                            <option value="CO">Colorado</option>
+                            <option value="OR">Oregon</option>
+                            <!-- Add more states as needed -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="zipcode">ZIP Code *</label>
+                        <input type="text" id="zipcode" placeholder="98101" maxlength="5" pattern="[0-9]{5}" required>
+                        <div class="form-hint">5-digit ZIP code</div>
+                    </div>
+                </div>
+
+                <!-- Save Buttons -->
+                <div class="save-btn-group">
+                    <button type="submit" class="btn-primary">Save Settings</button>
+                    <button type="button" class="btn-secondary" onclick="window.history.back()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Load Auth Script -->
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/settings.js"></script>
+</body>
+</html>

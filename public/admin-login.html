@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - T-Mobile Ad System</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+        }
+
+        .admin-login-container {
+            max-width: 450px;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .admin-login-card {
+            background: var(--tmobile-dark-gray);
+            padding: 50px 40px;
+            border-radius: 20px;
+            border: 2px solid var(--tmobile-magenta);
+            box-shadow: 0 10px 40px rgba(226, 0, 116, 0.5);
+        }
+
+        .admin-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .admin-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #E20074 0%, #FF2D92 100%);
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .admin-header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #E20074 0%, #FF2D92 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .admin-header p {
+            color: var(--tmobile-light-gray);
+            font-size: 1em;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--tmobile-white);
+            font-weight: 500;
+            font-size: 0.95em;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            background: var(--tmobile-black);
+            border: 2px solid var(--tmobile-gray);
+            border-radius: 10px;
+            color: var(--tmobile-white);
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--tmobile-magenta);
+            box-shadow: 0 0 0 3px rgba(226, 0, 116, 0.1);
+        }
+
+        .btn-admin-login {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #E20074 0%, #FF2D92 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-admin-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(226, 0, 116, 0.4);
+        }
+
+        .btn-admin-login:active {
+            transform: translateY(0);
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .back-link a {
+            color: var(--tmobile-light-gray);
+            text-decoration: none;
+            font-size: 0.95em;
+            transition: color 0.3s ease;
+        }
+
+        .back-link a:hover {
+            color: var(--tmobile-magenta);
+        }
+
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #f00;
+            color: #f00;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 0.9em;
+        }
+
+        .info-box {
+            background: rgba(226, 0, 116, 0.1);
+            border-left: 4px solid var(--tmobile-magenta);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 30px;
+            font-size: 0.85em;
+            color: var(--tmobile-light-gray);
+        }
+
+        @media (max-width: 768px) {
+            .admin-login-card {
+                padding: 40px 30px;
+            }
+
+            .admin-header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-login-container">
+        <div class="admin-login-card">
+            <div class="admin-header">
+                <span class="admin-badge">👑 ADMIN ACCESS</span>
+                <h1>Admin Login</h1>
+                <p>T-Mobile Ad System Management</p>
+            </div>
+
+            <div id="errorMessage" class="error-message"></div>
+
+            <form id="adminLoginForm" onsubmit="event.preventDefault(); adminLogin();">
+                <div class="form-group">
+                    <label for="adminUsername">Admin Username</label>
+                    <input
+                        type="text"
+                        id="adminUsername"
+                        placeholder="Enter admin username"
+                        required
+                        autocomplete="username"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="adminPassword">Admin Password</label>
+                    <input
+                        type="password"
+                        id="adminPassword"
+                        placeholder="Enter admin password"
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+
+                <button type="submit" class="btn-admin-login">
+                    Login to Dashboard
+                </button>
+            </form>
+
+            <div class="back-link">
+                <a href="/">← Back to Home</a>
+            </div>
+
+            <div class="info-box">
+                <strong>Demo Credentials:</strong><br>
+                Username: <code>admin</code><br>
+                Password: <code>admin123</code>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Admin credentials (in production, this would be in a secure backend)
+        const ADMIN_CREDENTIALS = {
+            'admin': 'admin123',
+            'tmobile_admin': 'tmobile2024',
+            'superadmin': 'super123'
+        };
+
+        window.adminLogin = function() {
+            const username = document.getElementById('adminUsername').value;
+            const password = document.getElementById('adminPassword').value;
+            const errorDiv = document.getElementById('errorMessage');
+
+            // Clear previous errors
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+
+            // Check credentials
+            if (ADMIN_CREDENTIALS[username] && ADMIN_CREDENTIALS[username] === password) {
+                // Store admin session
+                const adminSession = {
+                    username: username,
+                    loginTime: new Date().toISOString(),
+                    token: btoa(username + ':' + Date.now())
+                };
+
+                localStorage.setItem('adminSession', JSON.stringify(adminSession));
+
+                console.log('✅ Admin login successful');
+
+                // Redirect to admin dashboard
+                window.location.href = '/admin.html';
+            } else {
+                // Show error
+                errorDiv.textContent = '❌ Invalid username or password';
+                errorDiv.style.display = 'block';
+
+                // Shake animation
+                const card = document.querySelector('.admin-login-card');
+                card.style.animation = 'shake 0.5s';
+                setTimeout(() => {
+                    card.style.animation = '';
+                }, 500);
+            }
+        };
+
+        // Check if already logged in
+        window.addEventListener('DOMContentLoaded', function() {
+            const session = localStorage.getItem('adminSession');
+            if (session) {
+                try {
+                    const adminSession = JSON.parse(session);
+                    // Check if session is less than 24 hours old
+                    const loginTime = new Date(adminSession.loginTime);
+                    const now = new Date();
+                    const hoursDiff = (now - loginTime) / (1000 * 60 * 60);
+
+                    if (hoursDiff < 24) {
+                        console.log('✅ Valid admin session found, redirecting...');
+                        window.location.href = '/admin.html';
+                    } else {
+                        localStorage.removeItem('adminSession');
+                    }
+                } catch (e) {
+                    localStorage.removeItem('adminSession');
+                }
+            }
+        });
+    </script>
+
+    <style>
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+    </style>
+</body>
+</html>
