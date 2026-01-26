@@ -38,6 +38,341 @@ let map = null;
 let selectedMarkers = [];
 let selectedCircles = [];
 
+// ---------- Smart bidding (historical CSV driven) ----------
+// Put the CSV under: TADTBD/public/data/ads_input_1000_local_usd_week.csv
+const HISTORICAL_CSV_URL = '/data/ads_input_1000_local_usd_week.csv';
+
+// Slot ID mapping to match the dataset (ads_input_1000_local_usd_week.csv)
+// The CSV uses Slot IDs 1~8 for the 8 visible time slots on this page:
+// 06-08 => 1, 08-10 => 2, ... , 20-22 => 8
+const SLOT_ID_BY_LABEL = {
+    '06:00-08:00': 1,
+    '08:00-10:00': 2,
+    '10:00-12:00': 3,
+    '12:00-14:00': 4,
+    '14:00-16:00': 5,
+    '16:00-18:00': 6,
+    '18:00-20:00': 7,
+    '20:00-22:00': 8
+};
+
+let _historyRowsCache = null;
+let _historyLoadPromise = null;
+
+function $(id) {
+    return document.getElementById(id);
+}
+
+function formatUSD(amount) {
+    if (typeof amount !== 'number' || Number.isNaN(amount)) return '-';
+    return '$' + Math.round(amount).toLocaleString();
+}
+
+function safeNumber(x, fallback = null) {
+    const n = Number(x);
+    return Number.isFinite(n) ? n : fallback;
+}
+
+function parseAdId(adId) {
+    // Match "...z<zip>d<date>..." where date is usually like 07122025
+    try {
+        const zIdx = adId.indexOf('z');
+        const dIdx = adId.indexOf('d');
+        if (zIdx === -1 || dIdx === -1) return { zip: null, date: null };
+        return {
+            zip: adId.slice(zIdx + 1, dIdx),
+            date: adId.slice(dIdx + 1)
+        };
+    } catch {
+        return { zip: null, date: null };
+    }
+}
+
+function parseCsvLine(line) {
+    // Minimal CSV parser with quotes support
+    const out = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+                cur += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (ch === ',' && !inQuotes) {
+            out.push(cur);
+            cur = '';
+        } else {
+            cur += ch;
+        }
+    }
+    out.push(cur);
+    return out;
+}
+
+function parseCsv(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (lines.length === 0) return [];
+    const header = parseCsvLine(lines[0]).map(h => h.trim());
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+        const cols = parseCsvLine(lines[i]);
+        const row = {};
+        for (let c = 0; c < header.length; c++) {
+            row[header[c]] = (cols[c] ?? '').trim();
+        }
+        rows.push(row);
+    }
+    return rows;
+}
+
+async function loadHistoryRows() {
+    if (_historyRowsCache) return _historyRowsCache;
+    if (_historyLoadPromise) return _historyLoadPromise;
+
+    _historyLoadPromise = (async () => {
+        const res = await fetch(HISTORICAL_CSV_URL, { cache: 'no-cache' });
+        if (!res.ok) throw new Error(`Failed to load CSV (${res.status}) from ${HISTORICAL_CSV_URL}`);
+        const text = await res.text();
+        const rows = parseCsv(text);
+        // Add parsed_zip / parsed_date (like the python init step)
+        for (const r of rows) {
+            const { zip, date } = parseAdId(r.ad_id || '');
+            r.parsed_zip = zip;
+            r.parsed_date = date;
+        }
+        _historyRowsCache = rows;
+        return rows;
+    })();
+
+    return _historyLoadPromise;
+}
+
+function enumerateDatesMMDDYYYY(startISO, endISO) {
+    // startISO/endISO: "YYYY-MM-DD"
+    const [sy, sm, sd] = startISO.split('-').map(Number);
+    const [ey, em, ed] = endISO.split('-').map(Number);
+    const start = new Date(Date.UTC(sy, sm - 1, sd));
+    const end = new Date(Date.UTC(ey, em - 1, ed));
+    const out = [];
+    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const dd = String(d.getUTCDate()).padStart(2, '0');
+        const yyyy = String(d.getUTCFullYear());
+        out.push(`${mm}${dd}${yyyy}`);
+    }
+    return out;
+}
+
+function median(values) {
+    if (!values.length) return 10.0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    if (sorted.length % 2 === 1) return sorted[mid];
+    return (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function computeRecommendedBudgetFromHistory(rows, zipCodes, dates, slotIds) {
+    const nUnits = zipCodes.length * dates.length * slotIds.length;
+    if (!nUnits) {
+        return { totalBudget: 0, nUnits: 0, medianUnit: 10.0 };
+    }
+
+    const referencePrices = [];
+
+    for (const date of dates) {
+        for (const zipCode of zipCodes) {
+            const competitors = rows.filter(r => String(r.parsed_zip) === String(zipCode) && String(r.parsed_date) === String(date));
+
+            for (const slot of slotIds) {
+                const slotBids = [];
+                for (const row of competitors) {
+                    for (let i = 1; i <= 5; i++) {
+                        const pCol = `preferred_slot_${i}`;
+                        const bCol = `bid_usd_${i}`;
+                        const pref = safeNumber(row[pCol], null);
+                        if (pref !== null && pref === slot) {
+                            const bid = safeNumber(row[bCol], null);
+                            if (bid !== null) slotBids.push(bid);
+                        }
+                    }
+                }
+
+                slotBids.sort((a, b) => b - a);
+                let refPrice = 10;
+                if (slotBids.length >= 3) refPrice = slotBids[2];
+                else if (slotBids.length > 0) refPrice = slotBids[slotBids.length - 1];
+                referencePrices.push(refPrice);
+            }
+        }
+    }
+
+    const medianUnit = median(referencePrices);
+    const totalBudget = medianUnit * nUnits;
+    return { totalBudget, nUnits, medianUnit };
+}
+
+function setRecStatus(text, isError = false) {
+    const el = $('recStatus');
+    if (!el) return;
+    el.textContent = text;
+    el.style.color = isError ? '#ff6b6b' : 'var(--tmobile-light-gray)';
+}
+
+function renderPriceCards({ recTotal, nUnits, medianUnit }) {
+    const container = $('priceOptions');
+    if (!container) return;
+
+    const mk = (label, total, type, desc) => `
+        <div class="price-card" onclick="selectPrice(${Math.round(total)}, '${type}')">
+            <div class="price-label">${label}</div>
+            <div class="price-amount">${formatUSD(total)}</div>
+            <div class="price-description">${desc}</div>
+        </div>
+    `;
+
+    const conservative = recTotal * 0.85;
+    const competitive = recTotal;
+    const aggressive = recTotal * 1.2;
+
+    container.innerHTML = [
+        mk('Conservative', conservative, 'conservative', 'Lower budget, lower win probability'),
+        mk('Competitive', competitive, 'competitive', 'Recommended by historical median threshold'),
+        mk('Aggressive', aggressive, 'aggressive', 'Higher budget, higher win probability')
+    ].join('');
+
+    // Fill detail box
+    const details = $('recDetails');
+    if (details) details.style.display = 'block';
+    if ($('recUnits')) $('recUnits').textContent = nUnits.toLocaleString();
+    if ($('recMedianUnit')) $('recMedianUnit').textContent = formatUSD(medianUnit);
+    if ($('recTotal')) $('recTotal').textContent = formatUSD(recTotal);
+    if ($('recB1')) $('recB1').textContent = nUnits ? formatUSD(recTotal / nUnits) : '-';
+
+    setRecStatus('Ready. Pick a strategy or enter a custom total budget.');
+}
+
+async function updateRecommendedPrices() {
+    // Must be called after Step 4 DOM exists (it always exists in the page)
+    try {
+        setRecStatus('Calculating recommended prices from historical bids...');
+        const rows = await loadHistoryRows();
+
+        const zipCodes = (biddingData.zipcodes || []).map(String);
+        const dates = enumerateDatesMMDDYYYY(biddingData.startDate, biddingData.endDate);
+        const slotIds = (biddingData.timeSlots || [])
+            .map(label => SLOT_ID_BY_LABEL[label])
+            .filter(Boolean);
+
+        const { totalBudget, nUnits, medianUnit } = computeRecommendedBudgetFromHistory(rows, zipCodes, dates, slotIds);
+
+        // If CSV has no matching history, still give a sane minimum baseline
+        const safeTotal = totalBudget && totalBudget > 0 ? totalBudget : (10 * (nUnits || 1));
+        renderPriceCards({ recTotal: safeTotal, nUnits: nUnits || 0, medianUnit });
+
+    } catch (e) {
+        console.error('❌ Smart recommendation failed:', e);
+        setRecStatus(`Smart recommendation unavailable (${e.message}). Using fallback prices.`, true);
+
+        // Fallback: keep the UI usable
+        const container = $('priceOptions');
+        if (container) {
+            container.innerHTML = `
+                <div class="price-card" onclick="selectPrice(50, 'conservative')">
+                    <div class="price-label">Conservative</div>
+                    <div class="price-amount">$50</div>
+                    <div class="price-description">Safe bid, moderate competition</div>
+                </div>
+                <div class="price-card" onclick="selectPrice(100, 'competitive')">
+                    <div class="price-label">Competitive</div>
+                    <div class="price-amount">$100</div>
+                    <div class="price-description">Recommended for best results</div>
+                </div>
+                <div class="price-card" onclick="selectPrice(200, 'aggressive')">
+                    <div class="price-label">Aggressive</div>
+                    <div class="price-amount">$200</div>
+                    <div class="price-description">Maximum visibility</div>
+                </div>
+            `;
+        }
+    }
+}
+
+function round2(n) {
+    return Math.round(n * 100) / 100;
+}
+
+function simulateBiddingOutcomeFromHistory(rows, zipCodes, dates, slotIds, totalBudget) {
+    const totalUnits = zipCodes.length * dates.length * slotIds.length;
+    if (!totalUnits) {
+        return {
+            totalUnits: 0,
+            winUnits: 0,
+            winRate: 0,
+            perUnitBid: 0,
+            spentBudget: 0,
+            refundBudget: totalBudget
+        };
+    }
+
+    const b1 = totalBudget / totalUnits;
+    let winUnits = 0;
+    const details = [];
+
+    for (const date of dates) {
+        for (const zipCode of zipCodes) {
+            const competitors = rows.filter(r => String(r.parsed_zip) === String(zipCode) && String(r.parsed_date) === String(date));
+
+            for (const slot of slotIds) {
+                const competingBids = [];
+                for (const row of competitors) {
+                    for (let i = 1; i <= 5; i++) {
+                        const pCol = `preferred_slot_${i}`;
+                        const bCol = `bid_usd_${i}`;
+                        const pref = safeNumber(row[pCol], null);
+                        if (pref !== null && pref === slot) {
+                            const bid = safeNumber(row[bCol], null);
+                            if (bid !== null) competingBids.push(bid);
+                        }
+                    }
+                }
+
+                const allBids = competingBids.concat([b1]);
+                allBids.sort((a, b) => b - a);
+                // Match python agent behavior: rank uses the first occurrence (ties favor our bid)
+                const rank = allBids.indexOf(b1) + 1;
+                const isWin = rank <= 3;
+                if (isWin) winUnits += 1;
+
+                details.push({
+                    zip: String(zipCode),
+                    date: String(date), // MMDDYYYY to match the dataset/logs
+                    slot: Number(slot),
+                    rank,
+                    totalBids: allBids.length,
+                    outcome: isWin ? 'WIN' : 'LOST'
+                });
+            }
+        }
+    }
+
+    const spentBudget = winUnits * b1;
+    const refundBudget = Math.max(0, totalBudget - spentBudget);
+
+    return {
+        totalUnits,
+        winUnits,
+        winRate: totalUnits ? winUnits / totalUnits : 0,
+        perUnitBid: b1,
+        spentBudget,
+        refundBudget,
+        details
+    };
+}
+
 // Listen for auth state changes
 onAuthStateChanged(auth, (user) => {
     currentUser = user;
@@ -57,28 +392,19 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeMockupMap();
 });
 
-// Major US Cities with ZIP codes
+// ZIP options for the mockup "map" (Seattle metro area)
+// Keep the same UI card style; only replace the selectable ZIP list.
 const majorCities = [
-    { name: 'Seattle, WA', lat: 47.6062, lng: -122.3321, zip: '98101', population: '750K' },
-    { name: 'New York, NY', lat: 40.7128, lng: -74.0060, zip: '10001', population: '8.3M' },
-    { name: 'Los Angeles, CA', lat: 34.0522, lng: -118.2437, zip: '90001', population: '4M' },
-    { name: 'Chicago, IL', lat: 41.8781, lng: -87.6298, zip: '60601', population: '2.7M' },
-    { name: 'Houston, TX', lat: 29.7604, lng: -95.3698, zip: '77001', population: '2.3M' },
-    { name: 'Phoenix, AZ', lat: 33.4484, lng: -112.0740, zip: '85001', population: '1.7M' },
-    { name: 'Philadelphia, PA', lat: 39.9526, lng: -75.1652, zip: '19019', population: '1.6M' },
-    { name: 'San Antonio, TX', lat: 29.4241, lng: -98.4936, zip: '78201', population: '1.5M' },
-    { name: 'San Diego, CA', lat: 32.7157, lng: -117.1611, zip: '92101', population: '1.4M' },
-    { name: 'Dallas, TX', lat: 32.7767, lng: -96.7970, zip: '75201', population: '1.3M' },
-    { name: 'San Jose, CA', lat: 37.3382, lng: -121.8863, zip: '95101', population: '1M' },
-    { name: 'Austin, TX', lat: 30.2672, lng: -97.7431, zip: '78701', population: '978K' },
-    { name: 'Jacksonville, FL', lat: 30.3322, lng: -81.6557, zip: '32099', population: '950K' },
-    { name: 'San Francisco, CA', lat: 37.7749, lng: -122.4194, zip: '94102', population: '875K' },
-    { name: 'Columbus, OH', lat: 39.9612, lng: -82.9988, zip: '43004', population: '900K' },
-    { name: 'Fort Worth, TX', lat: 32.7555, lng: -97.3308, zip: '76101', population: '918K' },
-    { name: 'Charlotte, NC', lat: 35.2271, lng: -80.8431, zip: '28202', population: '885K' },
-    { name: 'Denver, CO', lat: 39.7392, lng: -104.9903, zip: '80201', population: '715K' },
-    { name: 'Boston, MA', lat: 42.3601, lng: -71.0589, zip: '02101', population: '692K' },
-    { name: 'Portland, OR', lat: 45.5152, lng: -122.6784, zip: '97201', population: '650K' }
+    { name: 'Bellevue', lat: 47.6101, lng: -122.2015, zip: '98005' },
+    { name: 'Seattle', lat: 47.6720, lng: -122.3050, zip: '98115' },
+    { name: 'Kirkland', lat: 47.6769, lng: -122.2060, zip: '98033' },
+    { name: 'Redmond', lat: 47.6739, lng: -122.1215, zip: '98052' },
+    { name: 'Bellevue', lat: 47.6101, lng: -122.2015, zip: '98007' },
+    { name: 'Bellevue', lat: 47.6101, lng: -122.2015, zip: '98004' },
+    { name: 'Seattle', lat: 47.6278, lng: -122.3426, zip: '98109' },
+    { name: 'Seattle', lat: 47.6367, lng: -122.3220, zip: '98102' },
+    { name: 'Bellevue', lat: 47.6101, lng: -122.2015, zip: '98008' },
+    { name: 'Seattle', lat: 47.6105, lng: -122.3366, zip: '98101' }
 ];
 
 // Initialize Mockup Map
@@ -93,7 +419,7 @@ function initializeMockupMap() {
         <div class="city-marker" data-zip="${city.zip}" onclick="toggleCitySelection('${city.zip}', '${city.name}')">
             <div class="city-name">${city.name}</div>
             <div class="city-zip">ZIP: ${city.zip}</div>
-            <div class="city-population">${city.population}</div>
+            ${city.population ? `<div class="city-population">${city.population}</div>` : ''}
         </div>
     `).join('');
 
@@ -182,9 +508,9 @@ window.handleManualZipcode = function() {
 function generateTimeSlots() {
     const timeSlotsContainer = document.getElementById('timeSlots');
     const slots = [
-        '00:00-02:00', '02:00-04:00', '04:00-06:00', '06:00-08:00',
-        '08:00-10:00', '10:00-12:00', '12:00-14:00', '14:00-16:00',
-        '16:00-18:00', '18:00-20:00', '20:00-22:00', '22:00-24:00'
+        // Removed: 22:00-24:00, 00:00-02:00, 02:00-04:00, 04:00-06:00
+        '06:00-08:00', '08:00-10:00', '10:00-12:00', '12:00-14:00',
+        '14:00-16:00', '16:00-18:00', '18:00-20:00', '20:00-22:00'
     ];
 
     timeSlotsContainer.innerHTML = slots.map(slot =>
@@ -209,23 +535,84 @@ window.toggleTimeSlot = function(slot) {
 
 // Set minimum dates
 function setMinDates() {
-    const today = new Date().toISOString().split('T')[0];
-    const minEndDate = new Date();
-    minEndDate.setDate(minEndDate.getDate() + 7);
-    const minEnd = minEndDate.toISOString().split('T')[0];
+    // Custom date picker: year fixed to 2025 (browser native date UI can't be restricted)
+    const startIsoEl = document.getElementById('startDate');
+    const endIsoEl = document.getElementById('endDate');
+    const startMonthEl = document.getElementById('startMonth');
+    const startDayEl = document.getElementById('startDay');
+    const endMonthEl = document.getElementById('endMonth');
+    const endDayEl = document.getElementById('endDay');
+    if (!startIsoEl || !endIsoEl || !startMonthEl || !startDayEl || !endMonthEl || !endDayEl) return;
 
-    document.getElementById('startDate').min = today;
-    document.getElementById('startDate').value = today;
-    document.getElementById('endDate').min = minEnd;
-    document.getElementById('endDate').value = minEnd;
+    const YEAR = 2025;
 
-    // Update end date when start date changes
-    document.getElementById('startDate').addEventListener('change', function() {
-        const startDate = new Date(this.value);
-        const minEndDate = new Date(startDate);
-        minEndDate.setDate(minEndDate.getDate() + 7);
-        document.getElementById('endDate').min = minEndDate.toISOString().split('T')[0];
+    const daysInMonth = (year, month) => new Date(year, month, 0).getDate(); // month: 1-12
+    const pad2 = (n) => String(n).padStart(2, '0');
+
+    const fillMonths = (sel) => {
+        sel.innerHTML = Array.from({ length: 12 }, (_, i) => {
+            const m = i + 1;
+            return `<option value="${m}">${pad2(m)}</option>`;
+        }).join('');
+    };
+
+    const fillDays = (sel, year, month, selectedDay = null) => {
+        const max = daysInMonth(year, month);
+        const cur = selectedDay ? Math.min(selectedDay, max) : 1;
+        sel.innerHTML = Array.from({ length: max }, (_, i) => {
+            const d = i + 1;
+            return `<option value="${d}">${pad2(d)}</option>`;
+        }).join('');
+        sel.value = String(cur);
+    };
+
+    const setIsoFromPickers = () => {
+        const sm = Number(startMonthEl.value);
+        const sd = Number(startDayEl.value);
+        const em = Number(endMonthEl.value);
+        const ed = Number(endDayEl.value);
+        startIsoEl.value = `${YEAR}-${pad2(sm)}-${pad2(sd)}`;
+        endIsoEl.value = `${YEAR}-${pad2(em)}-${pad2(ed)}`;
+    };
+
+    const ensureEndNotBeforeStart = () => {
+        setIsoFromPickers();
+        const s = new Date(startIsoEl.value);
+        const e = new Date(endIsoEl.value);
+        if (e < s) {
+            // Snap end = start
+            endMonthEl.value = startMonthEl.value;
+            fillDays(endDayEl, YEAR, Number(endMonthEl.value), Number(startDayEl.value));
+            setIsoFromPickers();
+        }
+    };
+
+    // Init options
+    fillMonths(startMonthEl);
+    fillMonths(endMonthEl);
+
+    // Default: dataset demo window
+    const defaultStart = { month: 7, day: 12 };
+    const defaultEnd = { month: 7, day: 13 };
+
+    startMonthEl.value = String(defaultStart.month);
+    fillDays(startDayEl, YEAR, defaultStart.month, defaultStart.day);
+    endMonthEl.value = String(defaultEnd.month);
+    fillDays(endDayEl, YEAR, defaultEnd.month, defaultEnd.day);
+    setIsoFromPickers();
+
+    // Wire changes
+    startMonthEl.addEventListener('change', () => {
+        fillDays(startDayEl, YEAR, Number(startMonthEl.value), Number(startDayEl.value));
+        ensureEndNotBeforeStart();
     });
+    startDayEl.addEventListener('change', ensureEndNotBeforeStart);
+
+    endMonthEl.addEventListener('change', () => {
+        fillDays(endDayEl, YEAR, Number(endMonthEl.value), Number(endDayEl.value));
+        ensureEndNotBeforeStart();
+    });
+    endDayEl.addEventListener('change', ensureEndNotBeforeStart);
 }
 
 // Navigation functions
@@ -275,13 +662,15 @@ window.goToStep2 = function() {
         return;
     }
 
-    // Calculate days
+    // Basic validation: end date must be on/after start date
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-
-    if (daysDiff < 7) {
-        alert('Campaign must be at least 7 days long');
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        alert('Please select valid start and end dates');
+        return;
+    }
+    if (end < start) {
+        alert('End date must be on or after start date');
         return;
     }
 
@@ -423,12 +812,15 @@ window.goToStep4 = function() {
 
     // Generate campaign summary
     updateCampaignSummary();
+    // Compute smart recommended budgets for Step 4
+    updateRecommendedPrices();
     goToStep(4);
 };
 
 // Update campaign summary
 function updateCampaignSummary() {
-    const days = Math.ceil((new Date(biddingData.endDate) - new Date(biddingData.startDate)) / (1000 * 60 * 60 * 24));
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const days = Math.round((new Date(biddingData.endDate) - new Date(biddingData.startDate)) / msPerDay) + 1;
     const totalReach = biddingData.advancedAudience
         ? biddingData.baseReach + biddingData.advancedReachBonus
         : biddingData.baseReach;
@@ -502,13 +894,36 @@ window.submitBid = async function() {
 Are you sure you want to submit this bid?
 
 Amount: $${biddingData.bidAmount}
-Duration: ${Math.ceil((new Date(biddingData.endDate) - new Date(biddingData.startDate)) / (1000 * 60 * 60 * 24))} days
+Duration: ${Math.round((new Date(biddingData.endDate) - new Date(biddingData.startDate)) / (1000 * 60 * 60 * 24)) + 1} days
 Estimated Reach: ${(biddingData.advancedAudience ? biddingData.baseReach + biddingData.advancedReachBonus : biddingData.baseReach).toLocaleString()} devices
     `.trim();
 
     if (!confirm(confirmMsg)) return;
 
     try {
+        // Try to compute final bidding result (demo simulation) from the historical CSV
+        let biddingResult = null;
+        try {
+            const rows = await loadHistoryRows();
+            const zipCodes = (biddingData.zipcodes || []).map(String);
+            const dates = enumerateDatesMMDDYYYY(biddingData.startDate, biddingData.endDate);
+            const slotIds = (biddingData.timeSlots || [])
+                .map(label => SLOT_ID_BY_LABEL[label])
+                .filter(Boolean);
+
+            biddingResult = simulateBiddingOutcomeFromHistory(rows, zipCodes, dates, slotIds, biddingData.bidAmount);
+            // Round for display/storage
+            biddingResult = {
+                ...biddingResult,
+                perUnitBid: round2(biddingResult.perUnitBid),
+                spentBudget: round2(biddingResult.spentBudget),
+                refundBudget: round2(biddingResult.refundBudget),
+                winRate: round2(biddingResult.winRate)
+            };
+        } catch (e) {
+            console.warn('⚠️ Could not compute bidding result (CSV missing/unavailable).', e);
+        }
+
         // Save bid to Firestore
         const bidDoc = {
             userId: currentUser.uid,
@@ -527,7 +942,8 @@ Estimated Reach: ${(biddingData.advancedAudience ? biddingData.baseReach + biddi
             posterImageUrl: biddingData.selectedPoster.imageUrl,
             bidAmount: biddingData.bidAmount,
             bidType: biddingData.bidType,
-            status: 'pending',
+            status: 'active',
+            biddingResult: biddingResult,
             createdAt: new Date().toISOString(),
             timestamp: Date.now()
         };

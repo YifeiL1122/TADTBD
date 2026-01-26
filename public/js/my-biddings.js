@@ -16,6 +16,236 @@ import {
 
 let currentUser = null;
 
+// ---------- Final bidding result (CSV driven demo) ----------
+const HISTORICAL_CSV_URL = '/data/ads_input_1000_local_usd_week.csv';
+// CSV uses Slot IDs 1~8 for the 8 visible time slots:
+// 06-08 => 1, 08-10 => 2, ... , 20-22 => 8
+const SLOT_ID_BY_LABEL = {
+    '06:00-08:00': 1,
+    '08:00-10:00': 2,
+    '10:00-12:00': 3,
+    '12:00-14:00': 4,
+    '14:00-16:00': 5,
+    '16:00-18:00': 6,
+    '18:00-20:00': 7,
+    '20:00-22:00': 8
+};
+
+let _historyRowsCache = null;
+let _historyLoadPromise = null;
+
+function formatUSD(amount) {
+    if (typeof amount !== 'number' || Number.isNaN(amount)) return '-';
+    return '$' + Math.round(amount).toLocaleString();
+}
+
+function round2(n) {
+    return Math.round(n * 100) / 100;
+}
+
+function safeNumber(x, fallback = null) {
+    const n = Number(x);
+    return Number.isFinite(n) ? n : fallback;
+}
+
+function parseAdId(adId) {
+    try {
+        const zIdx = adId.indexOf('z');
+        const dIdx = adId.indexOf('d');
+        if (zIdx === -1 || dIdx === -1) return { zip: null, date: null };
+        return { zip: adId.slice(zIdx + 1, dIdx), date: adId.slice(dIdx + 1) };
+    } catch {
+        return { zip: null, date: null };
+    }
+}
+
+function parseCsvLine(line) {
+    const out = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+                cur += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (ch === ',' && !inQuotes) {
+            out.push(cur);
+            cur = '';
+        } else {
+            cur += ch;
+        }
+    }
+    out.push(cur);
+    return out;
+}
+
+function parseCsv(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (lines.length === 0) return [];
+    const header = parseCsvLine(lines[0]).map(h => h.trim());
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+        const cols = parseCsvLine(lines[i]);
+        const row = {};
+        for (let c = 0; c < header.length; c++) row[header[c]] = (cols[c] ?? '').trim();
+        const { zip, date } = parseAdId(row.ad_id || '');
+        row.parsed_zip = zip;
+        row.parsed_date = date;
+        rows.push(row);
+    }
+    return rows;
+}
+
+async function loadHistoryRows() {
+    if (_historyRowsCache) return _historyRowsCache;
+    if (_historyLoadPromise) return _historyLoadPromise;
+
+    _historyLoadPromise = (async () => {
+        const res = await fetch(HISTORICAL_CSV_URL, { cache: 'no-cache' });
+        if (!res.ok) throw new Error(`Failed to load CSV (${res.status}) from ${HISTORICAL_CSV_URL}`);
+        const text = await res.text();
+        _historyRowsCache = parseCsv(text);
+        return _historyRowsCache;
+    })();
+
+    return _historyLoadPromise;
+}
+
+function enumerateDatesMMDDYYYY(startISO, endISO) {
+    const [sy, sm, sd] = startISO.split('-').map(Number);
+    const [ey, em, ed] = endISO.split('-').map(Number);
+    const start = new Date(Date.UTC(sy, sm - 1, sd));
+    const end = new Date(Date.UTC(ey, em - 1, ed));
+    const out = [];
+    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const dd = String(d.getUTCDate()).padStart(2, '0');
+        const yyyy = String(d.getUTCFullYear());
+        out.push(`${mm}${dd}${yyyy}`);
+    }
+    return out;
+}
+
+function simulateBiddingOutcomeFromHistory(rows, zipCodes, dates, slotIds, totalBudget) {
+    const totalUnits = zipCodes.length * dates.length * slotIds.length;
+    if (!totalUnits) {
+        return { totalUnits: 0, winUnits: 0, winRate: 0, perUnitBid: 0, spentBudget: 0, refundBudget: totalBudget };
+    }
+
+    const b1 = totalBudget / totalUnits;
+    let winUnits = 0;
+    const details = [];
+
+    for (const date of dates) {
+        for (const zipCode of zipCodes) {
+            const competitors = rows.filter(r => String(r.parsed_zip) === String(zipCode) && String(r.parsed_date) === String(date));
+            for (const slot of slotIds) {
+                const competingBids = [];
+                for (const row of competitors) {
+                    for (let i = 1; i <= 5; i++) {
+                        const pCol = `preferred_slot_${i}`;
+                        const bCol = `bid_usd_${i}`;
+                        const pref = safeNumber(row[pCol], null);
+                        if (pref !== null && pref === slot) {
+                            const bid = safeNumber(row[bCol], null);
+                            if (bid !== null) competingBids.push(bid);
+                        }
+                    }
+                }
+                const allBids = competingBids.concat([b1]);
+                allBids.sort((a, b) => b - a);
+                // Match python agent behavior: rank uses the first occurrence (ties favor our bid)
+                const rank = allBids.indexOf(b1) + 1;
+                const isWin = rank <= 3;
+                if (isWin) winUnits += 1;
+
+                details.push({
+                    zip: String(zipCode),
+                    date: String(date), // MMDDYYYY
+                    slot: Number(slot),
+                    rank,
+                    totalBids: allBids.length,
+                    outcome: isWin ? 'WIN' : 'LOST'
+                });
+            }
+        }
+    }
+
+    const spentBudget = winUnits * b1;
+    const refundBudget = Math.max(0, totalBudget - spentBudget);
+    return {
+        totalUnits,
+        winUnits,
+        winRate: totalUnits ? winUnits / totalUnits : 0,
+        perUnitBid: b1,
+        spentBudget,
+        refundBudget,
+        details
+    };
+}
+
+async function ensureFinalResult(bidId, data) {
+    // Always show Active in UI; backfill data.status/result for older docs if possible.
+    const resultEl = document.getElementById(`finalResult-${bidId}`);
+    if (!resultEl) return;
+
+    const show = (r) => {
+        if (!r) {
+            resultEl.textContent = '—';
+            return;
+        }
+        resultEl.textContent =
+            `✅ ${r.winUnits}/${r.totalUnits} WIN • Spent ${formatUSD(r.spentBudget)} • Refund ${formatUSD(r.refundBudget)}`;
+
+        const linesEl = document.getElementById(`finalLines-${bidId}`);
+        if (linesEl) {
+            const details = Array.isArray(r.details) ? r.details : [];
+            linesEl.innerHTML = details.map(d => {
+                const icon = d.outcome === 'WIN' ? '✅' : '❌';
+                return `<div>${icon} [${d.outcome}] Zip ${d.zip} | Date ${d.date} | Slot ${d.slot} | Rank ${d.rank}/${d.totalBids}</div>`;
+            }).join('');
+        }
+    };
+
+    if (data?.biddingResult?.totalUnits !== undefined) {
+        show(data.biddingResult);
+        // Backfill status if needed (optional)
+        if (data.status !== 'active') {
+            try { await updateDoc(doc(db, 'bids', bidId), { status: 'active' }); } catch { /* ignore */ }
+        }
+        return;
+    }
+
+    // Compute on-the-fly if missing
+    resultEl.textContent = 'Calculating...';
+    try {
+        const rows = await loadHistoryRows();
+        const zipCodes = (data.zipcodes && data.zipcodes.length ? data.zipcodes : [data.zipcode]).map(String);
+        const dates = enumerateDatesMMDDYYYY(data.startDate, data.endDate);
+        const slotIds = (data.timeSlots || []).map(l => SLOT_ID_BY_LABEL[l]).filter(Boolean);
+        const r = simulateBiddingOutcomeFromHistory(rows, zipCodes, dates, slotIds, Number(data.bidAmount) || 0);
+        const rounded = {
+            ...r,
+            perUnitBid: round2(r.perUnitBid),
+            spentBudget: round2(r.spentBudget),
+            refundBudget: round2(r.refundBudget),
+            winRate: round2(r.winRate)
+        };
+        show(rounded);
+        // Persist for future loads
+        await updateDoc(doc(db, 'bids', bidId), { status: 'active', biddingResult: rounded });
+    } catch (e) {
+        console.warn('Final result unavailable:', e);
+        resultEl.textContent = '— (CSV missing/unavailable)';
+        // Still normalize status in UI; best-effort persist
+        try { await updateDoc(doc(db, 'bids', bidId), { status: 'active' }); } catch { /* ignore */ }
+    }
+}
+
 // Listen for auth state changes
 onAuthStateChanged(auth, (user) => {
     currentUser = user;
@@ -58,6 +288,8 @@ async function loadUserBiddings() {
             const data = docSnap.data();
             const card = createBiddingCard(docSnap.id, data);
             list.appendChild(card);
+            // Fill final result asynchronously (and backfill status/result if needed)
+            ensureFinalResult(docSnap.id, data);
         });
 
         console.log('✅ Loaded', snapshot.size, 'biddings');
@@ -79,8 +311,9 @@ function createBiddingCard(bidId, data) {
     card.setAttribute('data-bid-id', bidId);
 
     const date = new Date(data.createdAt).toLocaleDateString();
-    const statusClass = `status-${data.status || 'pending'}`;
-    const statusText = (data.status || 'pending').charAt(0).toUpperCase() + (data.status || 'pending').slice(1);
+    // No pending in this demo: always show Active
+    const statusClass = 'status-active';
+    const statusText = 'Active';
 
     const zipcodes = data.zipcodes && data.zipcodes.length > 0
         ? data.zipcodes.join(', ')
@@ -112,6 +345,19 @@ function createBiddingCard(bidId, data) {
                 <div class="detail-label">Estimated Reach</div>
                 <div class="detail-value">${(data.estimatedReach || 0).toLocaleString()} devices</div>
             </div>
+            <div class="detail-item">
+                <div class="detail-label">Final Result</div>
+                <div class="detail-value" id="finalResult-${bidId}">Calculating...</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 10px; padding: 12px 15px; background: var(--tmobile-black); border-radius: 12px; border: 2px solid var(--tmobile-gray);">
+            <div style="font-size: 0.85em; color: var(--tmobile-gray); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+                Bidding outcome (per unit)
+            </div>
+            <div id="finalLines-${bidId}" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace; font-size: 0.9em; color: var(--tmobile-light-gray); line-height: 1.6;">
+                Calculating...
+            </div>
         </div>
 
         <div class="bidding-ad-preview">
@@ -123,9 +369,7 @@ function createBiddingCard(bidId, data) {
         </div>
 
         <div class="bidding-actions">
-            ${data.status === 'active' ? `
-                <button class="btn-primary" onclick="launchToESP32('${bidId}')" style="background: var(--success-green);">🚀 Launch to ESP32</button>
-            ` : ''}
+            <button class="btn-primary" onclick="launchToESP32('${bidId}')" style="background: var(--success-green);">🚀 Launch to ESP32</button>
             <button class="btn-primary" onclick="editBidding('${bidId}')">Edit Campaign</button>
             <button class="btn-secondary" onclick="viewDetails('${bidId}')">View Details</button>
             <button class="btn-danger" onclick="deleteBidding('${bidId}')">Delete</button>
