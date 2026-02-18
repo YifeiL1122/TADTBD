@@ -1,0 +1,72 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Ads collection - users can only read/write their own ads
+    match /ads/{adId} {
+      // Allow users to read their own ads
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Allow users to create ads with their own userId
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+
+      // Allow users to update their own ads
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Allow users to delete their own ads
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Bids collection - users can only read/write their own bids
+    match /bids/{bidId} {
+      // DEMO MODE:
+      // - Allow any signed-in user to read bids (needed for ranking + admin dashboard demo)
+      allow read: if request.auth != null;
+
+      // Allow users to create bids with their own userId
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+
+      // DEMO MODE:
+      // - Allow signed-in users to update bids (admin approval + ranking integration)
+      // NOTE: tighten this with custom claims for real production security.
+      allow update: if request.auth != null;
+
+      // Allow users to delete their own bids
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Deployments collection - users can read/write their own deployments
+    match /deployments/{deploymentId} {
+      // DEMO MODE: allow signed-in users to read deployments (admin view)
+      allow read: if request.auth != null;
+
+      // Allow users to create deployments with their own userId
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+
+      // Allow users to update their own deployments
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Allow users to delete their own deployments
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Ranking results (GSP simulation)
+    match /ranking_runs/{runId} {
+      allow read, write: if request.auth != null;
+    }
+    match /ranking_auctions/{docId} {
+      allow read, write: if request.auth != null;
+    }
+    match /ranking_merchants/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // T-Mobile Tuesday campaigns + coupon logs (demo)
+    match /tmobile_tuesday_campaigns/{docId} {
+      allow read, write: if request.auth != null;
+    }
+    match /coupon_logs/{docId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

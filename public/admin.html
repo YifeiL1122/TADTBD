@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - T-Mobile Ad System</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/admin-enhanced.css">
+    <style>
+        .admin-container {
+            max-width: 1600px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .page-header {
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-header-content h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .admin-badge {
+            background: linear-gradient(135deg, #E20074 0%, #FF2D92 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: var(--tmobile-dark-gray);
+            border: 2px solid var(--tmobile-gray);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 3em;
+            font-weight: 700;
+            color: var(--tmobile-magenta);
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: var(--tmobile-light-gray);
+            font-size: 1.1em;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--tmobile-gray);
+        }
+
+        .tab {
+            padding: 15px 30px;
+            background: transparent;
+            border: none;
+            color: var(--tmobile-light-gray);
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            color: var(--tmobile-white);
+        }
+
+        .tab.active {
+            color: var(--tmobile-magenta);
+            border-bottom-color: var(--tmobile-magenta);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .biddings-table {
+            background: var(--tmobile-dark-gray);
+            border: 2px solid var(--tmobile-gray);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--tmobile-black);
+        }
+
+        th {
+            padding: 20px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--tmobile-white);
+            border-bottom: 2px solid var(--tmobile-gray);
+        }
+
+        td {
+            padding: 20px;
+            border-bottom: 1px solid var(--tmobile-gray);
+        }
+
+        tr:hover {
+            background: rgba(226, 0, 116, 0.05);
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-pending {
+            background: rgba(255, 140, 0, 0.2);
+            color: var(--warning-orange);
+        }
+
+        .status-active {
+            background: rgba(0, 214, 89, 0.2);
+            color: var(--success-green);
+        }
+
+        .status-completed {
+            background: rgba(100, 100, 100, 0.2);
+            color: var(--tmobile-light-gray);
+        }
+
+        .status-rejected {
+            background: rgba(255, 0, 0, 0.2);
+            color: #f00;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85em;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit {
+            background: var(--tmobile-magenta);
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: var(--tmobile-light-magenta);
+        }
+
+        .btn-approve {
+            background: var(--success-green);
+            color: white;
+        }
+
+        .btn-approve:hover {
+            opacity: 0.8;
+        }
+
+        .btn-reject {
+            background: transparent;
+            border: 1px solid #f00;
+            color: #f00;
+        }
+
+        .btn-reject:hover {
+            background: rgba(255, 0, 0, 0.1);
+        }
+
+        .schedule-timeline {
+            margin-top: 30px;
+        }
+
+        .timeline-item {
+            background: var(--tmobile-dark-gray);
+            border: 2px solid var(--tmobile-gray);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            position: relative;
+            padding-left: 80px;
+        }
+
+        .timeline-date {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            font-weight: 600;
+            color: var(--tmobile-magenta);
+        }
+
+        .timeline-content h4 {
+            margin-bottom: 10px;
+        }
+
+        .timeline-content p {
+            color: var(--tmobile-light-gray);
+            font-size: 0.9em;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar select,
+        .filter-bar input {
+            padding: 10px 15px;
+            background: var(--tmobile-dark-gray);
+            border: 2px solid var(--tmobile-gray);
+            border-radius: 8px;
+            color: var(--tmobile-white);
+        }
+
+        .user-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .user-email {
+            font-size: 0.85em;
+            color: var(--tmobile-gray);
+        }
+
+        @media (max-width: 768px) {
+            .biddings-table {
+                overflow-x: auto;
+            }
+
+            table {
+                min-width: 1000px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Demo Loading Overlay -->
+    <div id="demoLoadingOverlay" class="demo-loading-overlay">
+        <div class="demo-loading-content">
+            <div class="demo-spinner"></div>
+            <div class="demo-loading-text">Loading Demo Data</div>
+            <div class="demo-loading-subtitle">Fetching 240 campaigns from dataset...</div>
+        </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">
+                <div>
+                    <div class="navbar-logo">T-Mobile</div>
+                    <div class="navbar-tagline">Ad System - Admin</div>
+                </div>
+            </a>
+            <ul class="navbar-menu">
+                <li><a href="/" class="navbar-link">Home</a></li>
+                <li><a href="/admin.html" class="navbar-link active">Admin Dashboard</a></li>
+            </ul>
+            <div class="user-info">
+                <span class="admin-badge">👑 Admin</span>
+                <span style="font-size: 0.8em; color: rgba(255,255,255,0.85); padding: 6px 12px; border: 1px solid rgba(255,255,255,0.35); border-radius: 20px;">
+                    build: 2026-02-11.1
+                </span>
+                <span class="user-display"></span>
+                <button class="btn-nav-logout" onclick="signOutUser()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="admin-container">
+        <div class="page-header">
+            <div class="page-header-content">
+                <h1>Admin Dashboard</h1>
+                <p style="color: var(--tmobile-light-gray); font-size: 1.1em;">Manage all advertising campaigns and schedules</p>
+            </div>
+            <div style="display:flex; align-items:center; gap: 12px; flex-wrap: wrap;">
+                <span id="demoDataBadge" class="status-badge status-active" style="display:none;">DEMO DATA</span>
+                <label style="display:flex; align-items:center; gap: 10px; color: var(--tmobile-light-gray); user-select:none;">
+                    <input type="checkbox" id="adminDemoMode" style="width:18px; height:18px;">
+                    Demo Mode
+                </label>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalBiddings">0</div>
+                <div class="stat-label">Total Campaigns</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="activeBiddings">0</div>
+                <div class="stat-label">Active</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="pendingBiddings">0</div>
+                <div class="stat-label">Pending Review</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalRevenue">$0</div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('all-biddings')">All Campaigns</button>
+            <button class="tab" onclick="switchTab('deployments')">Device Deployments</button>
+            <button class="tab" onclick="switchTab('schedule')">Ad Schedule</button>
+            <button class="tab" onclick="switchTab('ranking')">Ranking (GSP)</button>
+            <button class="tab" onclick="switchTab('analytics')">Analytics</button>
+        </div>
+
+        <!-- All Biddings Tab -->
+        <div id="all-biddings" class="tab-content active">
+            <div class="filter-bar">
+                <select id="statusFilter" onchange="filterBiddings()">
+                    <option value="">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+                <input type="text" id="searchUser" placeholder="Search by user email..." oninput="filterBiddings()">
+                <input type="date" id="dateFilter" onchange="filterBiddings()">
+            </div>
+
+            <div class="biddings-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Campaign ID</th>
+                            <th>User</th>
+                            <th>Locations</th>
+                            <th>Duration</th>
+                            <th>Bid Amount</th>
+                            <th>Reach</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="biddingsTableBody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px;">Loading campaigns...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Device Deployments Tab -->
+        <div id="deployments" class="tab-content">
+            <h2>Device Deployments</h2>
+            <p style="color: var(--tmobile-light-gray); margin-bottom: 20px;">Monitor and manage ad deployments to connected devices</p>
+
+            <div class="biddings-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Deployment ID</th>
+                            <th>Campaign</th>
+                            <th>User</th>
+                            <th>Regions</th>
+                            <th>Target Devices</th>
+                            <th>Active Devices</th>
+                            <th>Status</th>
+                            <th>Deployed At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deploymentsTableBody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px;">Loading deployments...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Schedule Tab -->
+        <div id="schedule" class="tab-content">
+            <h2>Upcoming Ad Deployments</h2>
+            <div class="schedule-timeline" id="scheduleTimeline">
+                <p style="color: var(--tmobile-light-gray); padding: 40px; text-align: center;">Loading schedule...</p>
+            </div>
+        </div>
+
+        <!-- Ranking Tab -->
+        <div id="ranking" class="tab-content">
+            <h2>Ranking Dashboard (GSP Simulation)</h2>
+            <p style="color: var(--tmobile-light-gray); margin-bottom: 20px;">
+                This uses a GSP-like auction per (zipcode, date, time_slot): top 3 win, and pay the next bid (reserve for last).
+            </p>
+
+            <div class="filter-bar">
+                <input type="date" id="rankingDate" />
+                <label style="display:flex; align-items:center; gap:10px; color: var(--tmobile-light-gray);">
+                    <input type="checkbox" id="rankingUseTuesday" style="width:18px; height:18px;">
+                    T-Mobile Tuesday
+                </label>
+                <select id="rankingDataSource">
+                    <option value="firestore">Data: Firestore (live bids)</option>
+                    <option value="csv_demo">Data: CSV demo (1000 ads input)</option>
+                </select>
+                <select id="rankingStatusFilter">
+                    <option value="active">Active only</option>
+                    <option value="pending_active">Pending + Active</option>
+                    <option value="all">All statuses</option>
+                </select>
+                <input type="number" id="rankingReserveCpm" placeholder="Reserve CPM" value="1" step="0.1" min="0" />
+                <button class="btn-secondary" id="btnRunRanking" style="background: var(--success-green); color: white;">Run Ranking</button>
+                <button class="btn-secondary" id="btnLoadLatestRanking">Load Latest</button>
+            </div>
+
+            <div style="margin-top: 15px; display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+                <div class="stat-card" style="text-align:left;">
+                    <div style="display:flex; justify-content: space-between; align-items: center; gap: 10px;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 1.1em;">T-Mobile Tuesday Winner</div>
+                            <div style="color: var(--tmobile-light-gray); font-size: 0.9em;">Top ad by impressions (selected date)</div>
+                        </div>
+                        <div id="tuesdayBadge" class="status-badge status-active" style="display:none;">TUESDAY</div>
+                    </div>
+                    <div style="display:flex; gap: 15px; margin-top: 15px; align-items: center;">
+                        <img id="tuesdayWinnerImg" src="" alt="" style="width: 80px; height: 110px; object-fit: cover; border-radius: 10px; border: 2px solid var(--tmobile-gray); display:none;">
+                        <div>
+                            <div id="tuesdayWinnerTitle" style="font-size: 1.1em; font-weight: 700;">—</div>
+                            <div id="tuesdayWinnerMeta" style="margin-top: 6px; color: var(--tmobile-light-gray); font-size: 0.9em;">Run ranking to see results.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card" style="text-align:left;">
+                    <div style="font-weight: 700; font-size: 1.1em;">Charts</div>
+                    <div style="color: var(--tmobile-light-gray); font-size: 0.9em;">Spend/slot, position mix, top merchants</div>
+                </div>
+            </div>
+
+            <div class="stats-grid" style="margin-top: 10px;">
+                <div class="stat-card">
+                    <div class="stat-value" id="rankTotalSpend">$0</div>
+                    <div class="stat-label">Total Spend (USD)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="rankTotalImps">0</div>
+                    <div class="stat-label">Total Impressions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="rankUniqueWinners">0</div>
+                    <div class="stat-label">Unique Winning Ads</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="rankCoveredSlots">0</div>
+                    <div class="stat-label">Slots with Winners</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 10px; display:grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+                <div class="stat-card" style="text-align:left;">
+                    <div style="font-weight: 700; margin-bottom: 10px;">Spend by Time Slot</div>
+                    <canvas id="chartSpendBySlot" height="110"></canvas>
+                </div>
+                <div class="stat-card" style="text-align:left;">
+                    <div style="font-weight: 700; margin-bottom: 10px;">Position Mix</div>
+                    <canvas id="chartPositionMix" height="110"></canvas>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;" class="stat-card">
+                <div style="font-weight: 700; margin-bottom: 10px;">Top Merchants (Spend)</div>
+                <canvas id="chartTopMerchants" height="90"></canvas>
+            </div>
+
+            <div style="margin-top: 25px;">
+                <h3 style="margin-bottom: 10px;">Top Merchants (by spend)</h3>
+                <div class="biddings-table">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Merchant</th>
+                            <th>Spend (USD)</th>
+                            <th>Impressions</th>
+                            <th>Wins</th>
+                        </tr>
+                        </thead>
+                        <tbody id="rankingMerchantTableBody">
+                        <tr><td colspan="4" style="text-align:center; padding: 40px;">No ranking results yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="margin-top: 25px;">
+                <h3 style="margin-bottom: 10px;">Auction Winners (per slot)</h3>
+                <div class="biddings-table">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>zipcode</th>
+                            <th>date</th>
+                            <th>slot</th>
+                            <th>pos</th>
+                            <th>merchant</th>
+                            <th>ad</th>
+                            <th>bid_cpm</th>
+                            <th>pay_cpm</th>
+                            <th>imps</th>
+                            <th>cost_usd</th>
+                        </tr>
+                        </thead>
+                        <tbody id="rankingAuctionTableBody">
+                        <tr><td colspan="10" style="text-align:center; padding: 40px;">No ranking results yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics" class="tab-content">
+            <h2>Campaign Analytics</h2>
+            <p style="color: var(--tmobile-light-gray); margin-bottom: 20px;">
+                Visualize campaign performance. (If there’s no data yet, demo charts will render with fake data.)
+            </p>
+
+            <div class="stats-grid">
+                <div class="stat-card" style="text-align:left;">
+                    <div style="font-weight: 700; margin-bottom: 10px;">Revenue (last 7 days)</div>
+                    <canvas id="chartRevenue7d" height="110"></canvas>
+                    <div id="chartRevenue7dHint" style="margin-top:8px; color: var(--tmobile-gray); font-size: 0.85em;"></div>
+                </div>
+                <div class="stat-card" style="text-align:left;">
+                    <div style="font-weight: 700; margin-bottom: 10px;">Status Mix</div>
+                    <canvas id="chartStatusMix" height="110"></canvas>
+                    <div id="chartStatusMixHint" style="margin-top:8px; color: var(--tmobile-gray); font-size: 0.85em;"></div>
+                </div>
+            </div>
+
+            <div class="stat-card" style="margin-top: 20px; text-align:left;">
+                <div style="font-weight: 700; margin-bottom: 10px;">Top ZIP codes (by #campaigns)</div>
+                <canvas id="chartTopZipcodes" height="90"></canvas>
+                <div id="chartTopZipcodesHint" style="margin-top:8px; color: var(--tmobile-gray); font-size: 0.85em;"></div>
+            </div>
+
+            <div style="margin-top: 25px;">
+                <h3 style="margin-bottom: 10px;">T-Mobile Tuesday Manager</h3>
+                <div class="stat-card" style="text-align:left;">
+                    <div style="display:grid; grid-template-columns: 1.2fr 1.8fr; gap: 20px; align-items: start;">
+                        <div>
+                            <div style="color: var(--tmobile-light-gray); font-size: 0.95em; margin-bottom: 10px;">
+                                Pick which ad runs on Tuesday and attach coupon info. (Demo-friendly)
+                            </div>
+                            <div class="filter-bar" style="gap: 10px;">
+                                <input type="date" id="tuesdayDate" />
+                                <select id="tuesdayDataSource">
+                                    <option value="csv_demo">Data: CSV demo</option>
+                                    <option value="ranking_latest">Data: Latest Ranking Winners</option>
+                                </select>
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <label style="display:block; color: var(--tmobile-light-gray); margin-bottom: 6px;">Tuesday Ad</label>
+                                <select id="tuesdayAdSelect" style="width:100%; padding: 12px; border-radius: 10px; background: var(--tmobile-black); border: 2px solid var(--tmobile-gray); color: var(--tmobile-white);"></select>
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <label style="display:block; color: var(--tmobile-light-gray); margin-bottom: 6px;">Coupon Code</label>
+                                <input id="tuesdayCouponCode" placeholder="e.g. TUE10" style="width:100%; padding: 12px; border-radius: 10px; background: var(--tmobile-black); border: 2px solid var(--tmobile-gray); color: var(--tmobile-white);" />
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <label style="display:block; color: var(--tmobile-light-gray); margin-bottom: 6px;">Coupon Description</label>
+                                <input id="tuesdayCouponDesc" placeholder="e.g. 10% off today only" style="width:100%; padding: 12px; border-radius: 10px; background: var(--tmobile-black); border: 2px solid var(--tmobile-gray); color: var(--tmobile-white);" />
+                            </div>
+                            <div style="display:flex; gap: 10px; flex-wrap: wrap; margin-top: 14px;">
+                                <button class="btn-secondary" id="btnSaveTuesdayCampaign" style="background: var(--tmobile-magenta); color: white;">Save Tuesday Campaign</button>
+                                <button class="btn-secondary" id="btnDemoSendCoupons">Send Coupons (demo)</button>
+                                <button class="btn-secondary" id="btnDemoMarkUsed">Mark Used (demo)</button>
+                            </div>
+                            <div id="tuesdayManagerHint" style="margin-top: 10px; color: var(--tmobile-gray); font-size: 0.85em;"></div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 700; margin-bottom: 10px;">All Coupons: Send & Use Status</div>
+                            <div class="biddings-table">
+                                <table>
+                                    <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Ad</th>
+                                        <th>Coupon</th>
+                                        <th>Sent</th>
+                                        <th>Used</th>
+                                        <th>Updated</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="couponCampaignTableBody">
+                                    <tr><td colspan="6" style="text-align:center; padding: 30px;">Loading...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="margin-top: 12px;">
+                                <div style="font-weight: 700; margin-bottom: 6px;">Recent Coupon Logs</div>
+                                <div id="couponLogs" style="max-height: 180px; overflow:auto; padding: 12px; border: 2px solid var(--tmobile-gray); border-radius: 12px; background: rgba(0,0,0,0.35); color: var(--tmobile-light-gray);">
+                                    No logs yet.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal (Hidden by default) -->
+    <div id="editModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; padding: 40px; overflow-y: auto;">
+        <div style="max-width: 800px; margin: 0 auto; background: var(--tmobile-dark-gray); border-radius: 16px; padding: 40px; border: 2px solid var(--tmobile-gray);">
+            <h2 style="margin-bottom: 30px;">Edit Campaign</h2>
+            <div id="editFormContent"></div>
+            <div style="display: flex; gap: 15px; margin-top: 30px;">
+                <button class="btn-primary" onclick="saveEdit()">Save Changes</button>
+                <button class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inline bridge for onclick handlers (before modules load) -->
+    <script>
+        // Temporary stubs to prevent "not defined" errors before modules load
+        window.switchTab = window.switchTab || function(tabName) {
+            console.log('switchTab stub called, waiting for admin.js to load...');
+            // Store the call to retry after module loads
+            setTimeout(() => window.switchTab && window.switchTab(tabName), 100);
+        };
+        window.filterBiddings = window.filterBiddings || function() {};
+        window.editBidding = window.editBidding || function() {};
+        window.updateStatus = window.updateStatus || function() {};
+        window.saveEdit = window.saveEdit || function() {};
+        window.closeEditModal = window.closeEditModal || function() {};
+    </script>
+
+    <!-- Load Auth Script -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/admin.js"></script>
+    <script type="module" src="/js/ranking-admin.js"></script>
+    <script type="module" src="/js/tuesday-coupons-admin.js"></script>
+</body>
+</html>
