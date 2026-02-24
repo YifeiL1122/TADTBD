@@ -110,10 +110,18 @@ async function populateAdSelect() {
 
   let ads = [];
   if (source === 'csv_demo') {
-    ads = await listDemoAdsForDate(ymd);
+    try {
+      ads = await listDemoAdsForDate(ymd);
+    } catch (_) {
+      ads = [];
+    }
     if (!ads.length) {
-      sel.innerHTML = '<option value="">No ads for this date in CSV</option>';
-      return;
+      const fallbackAds = [
+        { ad_id: 'DEMO-AD-001', merchant_id: 'M001', zipcode: '98101', poster_image_url: '', poster_slogan: 'Demo Merchant 1' },
+        { ad_id: 'DEMO-AD-002', merchant_id: 'M007', zipcode: '10001', poster_image_url: '', poster_slogan: 'Demo Merchant 7' },
+        { ad_id: 'DEMO-AD-003', merchant_id: 'M031', zipcode: '60601', poster_image_url: '', poster_slogan: 'Demo Merchant 31' }
+      ];
+      ads = fallbackAds;
     }
   } else {
     // Latest ranking winners: for demo, just show placeholder until we wire query by date.
@@ -307,7 +315,12 @@ async function ensureDemoSeed() {
   const state = getDemoState();
   if (state.campaigns.length) return;
   const ymd = yyyymmddFromInput($('tuesdayDate')?.value || '') || '20250715';
-  const ads = await listDemoAdsForDate(ymd);
+  let ads = [];
+  try {
+    ads = await listDemoAdsForDate(ymd);
+  } catch (_) {
+    ads = [];
+  }
   const pick = ads[0] || { ad_id: 'DEMO-AD-001', merchant_id: 'M001', poster_image_url: '', poster_slogan: 'Demo Tuesday Ad' };
   state.campaigns.push({
     id: `demo_${Date.now()}`,

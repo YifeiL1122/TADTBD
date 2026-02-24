@@ -283,8 +283,8 @@ window.addEventListener('DOMContentLoaded', function() {
                 try {
                     await loadAllBiddings();
                     await loadAllDeployments();
-                    window.dispatchEvent(new CustomEvent('admin-demo-mode-changed', { detail: { enabled: toggle.checked } }));
                 } finally {
+                    window.dispatchEvent(new CustomEvent('admin-demo-mode-changed', { detail: { enabled: toggle.checked } }));
                     showDemoLoading(false);
                 }
             });
@@ -292,6 +292,9 @@ window.addEventListener('DOMContentLoaded', function() {
         loadAllBiddings();
         loadAllDeployments();
         window.dispatchEvent(new CustomEvent('admin-demo-mode-changed', { detail: { enabled: getDemoMode() } }));
+        setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('admin-demo-mode-changed', { detail: { enabled: getDemoMode() } }));
+        }, 700);
         // Ensure first tab works even before user clicks.
         window.switchTab('all-biddings');
     }

@@ -33,6 +33,36 @@ let chartSpendBySlot = null;
 let chartPositionMix = null;
 let chartTopMerchants = null;
 
+function isDemoModeEnabled() {
+  return localStorage.getItem('adminDemoMode') !== 'false';
+}
+
+function buildFallbackDemoBidRows(targetYmd) {
+  const date = String(targetYmd || '20250715');
+  const rows = [];
+  const merchants = ['M001', 'M007', 'M010', 'M031', 'M045'];
+  const zipcodes = ['98101', '10001', '90001', '60601'];
+  for (let z = 0; z < zipcodes.length; z++) {
+    for (let s = 1; s <= 8; s++) {
+      for (let m = 0; m < merchants.length; m++) {
+        rows.push({
+          zipcode: zipcodes[z],
+          date,
+          time_slot: s,
+          merchant_id: merchants[m],
+          merchant_email: `${merchants[m].toLowerCase()}@demo.merchant`,
+          ad_code: `DEMO-${merchants[m]}-${zipcodes[z]}-${s}`,
+          bid_cpm: Number((1 + (m * 0.6) + (s * 0.08)).toFixed(2)),
+          campaign_id: `demo_${merchants[m]}_${z}_${s}`,
+          poster_image_url: '',
+          poster_slogan: `Demo ${merchants[m]} Slot ${s}`
+        });
+      }
+    }
+  }
+  return rows;
+}
+
 function ensureDefaultDate() {
   const el = $('rankingDate');
   if (!el) return;
@@ -420,22 +450,30 @@ async function runRanking(opts = {}) {
   try {
     let bidRows = [];
     if (dataSource === 'csv_demo') {
-      // Ensure the demo dataset is loaded; if the selected date isn't in the dataset,
-      // move to the first available date (so the dashboard shows something immediately).
-      const demo = await loadDemoDataset();
-      if (!demo.dates.includes(String(targetYmd))) {
-        const fallback = demo.dates[0];
-        if (fallback) {
-          $('rankingDate').value = demoDateYmdToInput(fallback);
-          bidRows = await buildBidRowsFromDemoCsv(fallback);
+      try {
+        // Ensure the demo dataset is loaded; if selected date isn't in dataset,
+        // move to first available date so dashboard renders immediately.
+        const demo = await loadDemoDataset();
+        if (!demo.dates.includes(String(targetYmd))) {
+          const fallback = demo.dates[0];
+          if (fallback) {
+            $('rankingDate').value = demoDateYmdToInput(fallback);
+            bidRows = await buildBidRowsFromDemoCsv(fallback);
+          }
+        } else {
+          bidRows = await buildBidRowsFromDemoCsv(targetYmd);
         }
-      } else {
-        bidRows = await buildBidRowsFromDemoCsv(targetYmd);
+      } catch (err) {
+        console.warn('CSV demo load failed, using fallback demo rows:', err);
       }
     } else {
       const bids = await fetchBidsForRanking(statusMode);
       bidRows = expandBidsToAuctionInputs(bids, targetYmd);
     }
+    if (!bidRows.length && dataSource === 'csv_demo') {
+      bidRows = buildFallbackDemoBidRows(targetYmd);
+    }
+
     const auctionRows = runGspAuctions(bidRows, reserveCpm);
     const merchantRows = summarizeMerchants(auctionRows);
 
@@ -462,6 +500,7 @@ async function renderDemoRankingInstantly() {
   if (!$('rankingDataSource')) return;
   $('rankingDataSource').value = 'csv_demo';
   if ($('rankingStatusFilter')) $('rankingStatusFilter').value = 'all';
+  if ($('rankingReserveCpm')) $('rankingReserveCpm').value = '0.5';
   await runRanking({ skipSave: true, silent: true });
 }
 
@@ -509,6 +548,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
   if (localStorage.getItem('adminDemoMode') !== 'false') {
     setTimeout(() => { renderDemoRankingInstantly(); }, 250);
+  }
+
+  const demoToggle = $('adminDemoMode');
+  if (demoToggle) {
+    demoToggle.addEventListener('change', async () => {
+      if (demoToggle.checked) await renderDemoRankingInstantly();
+    });
+  }
+
+  if (isDemoModeEnabled() && $('adminDemoMode')?.checked) {
+    setTimeout(() => { renderDemoRankingInstantly(); }, 600);
   }
 });
 
