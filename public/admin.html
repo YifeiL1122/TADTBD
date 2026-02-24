@@ -311,45 +311,112 @@
     <div class="admin-container">
         <div class="page-header">
             <div class="page-header-content">
-                <h1>Admin Dashboard</h1>
-                <p style="color: var(--tmobile-light-gray); font-size: 1.1em;">Manage all advertising campaigns and schedules</p>
+                <h1 style="display: flex; align-items: center; gap: 12px;">
+                    📊 Dashboard
+                    <span id="demoDataBadge" class="status-badge status-active" style="display:none; font-size: 0.45em;">DEMO</span>
+                </h1>
             </div>
             <div style="display:flex; align-items:center; gap: 12px; flex-wrap: wrap;">
-                <span id="demoDataBadge" class="status-badge status-active" style="display:none;">DEMO DATA</span>
-                <label style="display:flex; align-items:center; gap: 10px; color: var(--tmobile-light-gray); user-select:none;">
+                <label style="display:flex; align-items:center; gap: 10px; color: var(--tmobile-light-gray); user-select:none; cursor: pointer;">
                     <input type="checkbox" id="adminDemoMode" style="width:18px; height:18px;">
-                    Demo Mode
+                    🎭 Demo Mode
                 </label>
             </div>
         </div>
 
-        <!-- Statistics -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="totalBiddings">0</div>
-                <div class="stat-label">Total Campaigns</div>
+        <!-- Mega KPI Cards -->
+        <div class="mega-kpi-grid">
+            <div class="mega-kpi-card">
+                <div class="mega-kpi-icon">💰</div>
+                <div class="mega-kpi-content">
+                    <div class="mega-kpi-value" id="totalRevenue">$0</div>
+                    <div class="mega-kpi-label">Total Revenue</div>
+                    <div class="mega-kpi-trend" id="trendRevenue">—</div>
+                </div>
+                <canvas id="sparklineRevenue" width="120" height="50"></canvas>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="activeBiddings">0</div>
-                <div class="stat-label">Active</div>
+            
+            <div class="mega-kpi-card">
+                <div class="mega-kpi-icon">📊</div>
+                <div class="mega-kpi-content">
+                    <div class="mega-kpi-value" id="totalBiddings">0</div>
+                    <div class="mega-kpi-label">Campaigns</div>
+                    <div class="mega-kpi-trend" id="trendCampaigns">—</div>
+                </div>
+                <canvas id="sparklineCampaigns" width="120" height="50"></canvas>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="pendingBiddings">0</div>
-                <div class="stat-label">Pending Review</div>
+
+            <div class="mega-kpi-card">
+                <div class="mega-kpi-icon">✅</div>
+                <div class="mega-kpi-content">
+                    <div class="mega-kpi-value" id="activeBiddings">0</div>
+                    <div class="mega-kpi-label">Active Now</div>
+                    <div class="mega-kpi-trend" id="trendActive">—</div>
+                </div>
+                <canvas id="sparklineActive" width="120" height="50"></canvas>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalRevenue">$0</div>
-                <div class="stat-label">Total Revenue</div>
+
+            <div class="mega-kpi-card">
+                <div class="mega-kpi-icon">⏳</div>
+                <div class="mega-kpi-content">
+                    <div class="mega-kpi-value" id="pendingBiddings">0</div>
+                    <div class="mega-kpi-label">Pending</div>
+                    <div class="mega-kpi-trend" id="trendPending">—</div>
+                </div>
+                <canvas id="sparklinePending" width="120" height="50"></canvas>
             </div>
+
+            <div class="mega-kpi-card">
+                <div class="mega-kpi-icon">👁️</div>
+                <div class="mega-kpi-content">
+                    <div class="mega-kpi-value" id="totalImpressions">0</div>
+                    <div class="mega-kpi-label">Impressions</div>
+                    <div class="mega-kpi-trend" id="trendImpressions">—</div>
+                </div>
+                <canvas id="sparklineImpressions" width="120" height="50"></canvas>
+            </div>
+        </div>
+
+        <!-- Performance Heatmap -->
+        <div class="heatmap-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div>
+                    <div style="font-weight: 700; font-size: 1.2em;">🔥 Hourly Performance Heatmap</div>
+                    <div style="color: #aaaaaa; font-size: 0.9em;">Campaign activity by time slot</div>
+                </div>
+            </div>
+            <div class="heatmap-grid" id="performanceHeatmap"></div>
+        </div>
+
+        <!-- Campaign Timeline -->
+        <div class="timeline-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div>
+                    <div style="font-weight: 700; font-size: 1.2em;">📅 Active Campaign Timeline</div>
+                    <div style="color: #aaaaaa; font-size: 0.9em;">Visual schedule of running campaigns</div>
+                </div>
+            </div>
+            <div id="campaignTimeline"></div>
+        </div>
+
+        <!-- Conversion Funnel -->
+        <div class="funnel-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div>
+                    <div style="font-weight: 700; font-size: 1.2em;">🎯 Campaign Funnel</div>
+                    <div style="color: #aaaaaa; font-size: 0.9em;">From submission to deployment</div>
+                </div>
+            </div>
+            <div id="campaignFunnel"></div>
         </div>
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('all-biddings')">All Campaigns</button>
-            <button class="tab" onclick="switchTab('deployments')">Device Deployments</button>
-            <button class="tab" onclick="switchTab('schedule')">Ad Schedule</button>
-            <button class="tab" onclick="switchTab('ranking')">Ranking (GSP)</button>
-            <button class="tab" onclick="switchTab('analytics')">Analytics</button>
+            <button class="tab active" onclick="switchTab('all-biddings')">📊 Campaigns</button>
+            <button class="tab" onclick="switchTab('deployments')">📱 Devices</button>
+            <button class="tab" onclick="switchTab('schedule')">📅 Schedule</button>
+            <button class="tab" onclick="switchTab('ranking')">🏆 Ranking</button>
+            <button class="tab" onclick="switchTab('analytics')">📈 Analytics</button>
         </div>
 
         <!-- All Biddings Tab -->

@@ -2,6 +2,14 @@
 import { db } from './firebase-config.js';
 import { loadDemoDataset } from './demo-dataset.js';
 import {
+    formatNumber,
+    updateTrends,
+    renderSparklines,
+    renderPerformanceHeatmap,
+    renderCampaignTimeline,
+    renderCampaignFunnel
+} from './admin-viz.js';
+import {
     collection,
     getDocs,
     query,
@@ -625,11 +633,21 @@ function updateStatistics() {
     const active = allBiddings.filter(b => b.status === 'active').length;
     const pending = allBiddings.filter(b => b.status === 'pending').length;
     const totalRevenue = allBiddings.reduce((sum, b) => sum + (b.bidAmount || 0), 0);
+    const totalImpressions = allBiddings.reduce((sum, b) => sum + (Number(b.estimatedReach) || 0), 0);
 
     document.getElementById('totalBiddings').textContent = total;
     document.getElementById('activeBiddings').textContent = active;
     document.getElementById('pendingBiddings').textContent = pending;
     document.getElementById('totalRevenue').textContent = '$' + totalRevenue.toLocaleString();
+    const impressionsEl = document.getElementById('totalImpressions');
+    if (impressionsEl) impressionsEl.textContent = formatNumber(totalImpressions);
+    
+    // Update trends and visualizations
+    updateTrends(allBiddings);
+    renderPerformanceHeatmap(allBiddings);
+    renderCampaignTimeline(allBiddings);
+    renderCampaignFunnel(allBiddings);
+    renderSparklines(allBiddings);
 }
 
 // Display biddings in table
