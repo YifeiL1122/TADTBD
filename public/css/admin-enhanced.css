@@ -520,3 +520,92 @@ canvas {
         grid-template-columns: repeat(6, 1fr);
     }
 }
+
+/* Generic visual card grid for Ranking/Coupon */
+.viz-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.viz-card {
+    background: linear-gradient(180deg, rgba(18, 20, 26, 0.92) 0%, rgba(10, 12, 18, 0.92) 100%);
+    border: 1px solid rgba(226, 0, 116, 0.28);
+    border-radius: 14px;
+    padding: 14px;
+}
+
+.viz-card-title {
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.viz-card-sub {
+    color: #bfc5d1;
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+}
+
+.viz-metric-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: #ccd2dc;
+    margin-bottom: 4px;
+}
+
+.viz-progress {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 9px;
+}
+
+.viz-progress > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #e20074 0%, #ff2d92 100%);
+}
+
+.viz-chip-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.viz-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    background: rgba(255, 255, 255, 0.09);
+    color: #f2f5fa;
+}
+
+.viz-empty {
+    border: 1px dashed rgba(226, 0, 116, 0.35);
+    border-radius: 12px;
+    padding: 22px;
+    text-align: center;
+    color: #bec5cf;
+    background: rgba(10, 12, 18, 0.7);
+}
+
+.coupon-log-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: #d5dbe5;
+    font-size: 0.82rem;
+}
+
+.coupon-log-item:last-child {
+    border-bottom: 0;
+}

@@ -22,6 +22,7 @@ function $(id) { return document.getElementById(id); }
 
 const CAMPAIGNS = 'tmobile_tuesday_campaigns';
 const LOGS = 'coupon_logs';
+const DEMO_STATE_KEY = 'tmobileTuesdayDemoStateV1';
 
 function yyyymmddFromInput(input) {
   if (!input) return null;
@@ -45,6 +46,52 @@ function fmtTs(ts) {
 function setHint(text) {
   const el = $('tuesdayManagerHint');
   if (el) el.textContent = text || '';
+}
+
+function isDemoMode() {
+  return localStorage.getItem('adminDemoMode') !== 'false';
+}
+
+function getDemoState() {
+  try {
+    const raw = localStorage.getItem(DEMO_STATE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (parsed && Array.isArray(parsed.campaigns) && Array.isArray(parsed.logs)) return parsed;
+  } catch (_) {}
+  return { campaigns: [], logs: [] };
+}
+
+function setDemoState(state) {
+  localStorage.setItem(DEMO_STATE_KEY, JSON.stringify(state));
+}
+
+function renderCouponCards(rows) {
+  const box = $('couponCampaignCards');
+  if (!box) return;
+  if (!rows.length) {
+    box.innerHTML = '<div class="viz-empty">No coupon campaigns yet. Create one on the left.</div>';
+    return;
+  }
+  const maxSent = Math.max(1, ...rows.map(r => Number(r.sent_count || 0)));
+  box.innerHTML = rows.map((r) => {
+    const sent = Number(r.sent_count || 0);
+    const used = Number(r.used_count || 0);
+    const useRate = sent > 0 ? Math.round((used / sent) * 100) : 0;
+    const sentPct = Math.max(5, Math.round((sent / maxSent) * 100));
+    return `
+      <div class="viz-card">
+        <div class="viz-card-title">${r.ad_id || 'Ad N/A'}</div>
+        <div class="viz-card-sub">${r.dateYmd || '—'} • ${r.coupon_code || 'No code'}</div>
+        <div class="viz-metric-row"><span>Sent</span><span>${sent.toLocaleString()}</span></div>
+        <div class="viz-progress"><span style="width:${sentPct}%"></span></div>
+        <div class="viz-metric-row"><span>Used</span><span>${used.toLocaleString()}</span></div>
+        <div class="viz-chip-row">
+          <span class="viz-chip">Use rate ${useRate}%</span>
+          <span class="viz-chip">Updated ${fmtTs(r.updatedAt || r.createdAt)}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 async function populateAdSelect() {
@@ -88,56 +135,57 @@ async function populateAdSelect() {
 }
 
 async function loadCampaigns() {
-  const tbody = $('couponCampaignTableBody');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 30px;">Loading...</td></tr>';
+  const cards = $('couponCampaignCards');
+  if (cards) cards.innerHTML = '<div class="viz-empty">Loading...</div>';
+
+  if (isDemoMode()) {
+    const state = getDemoState();
+    renderCouponCards(state.campaigns);
+    return state.campaigns;
+  }
 
   const snap = await getDocs(query(collection(db, CAMPAIGNS), orderBy('updatedAt', 'desc'), limit(25)));
   const rows = [];
   snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
-
-  if (tbody) {
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 30px;">No coupon campaigns yet. Create one on the left.</td></tr>';
-    } else {
-      tbody.innerHTML = rows.map(r => `
-        <tr>
-          <td>${r.dateYmd || '—'}</td>
-          <td>${r.ad_id || '—'}</td>
-          <td><strong>${r.coupon_code || '—'}</strong><div class="user-email">${r.coupon_desc || ''}</div></td>
-          <td>${Number(r.sent_count || 0).toLocaleString()}</td>
-          <td>${Number(r.used_count || 0).toLocaleString()}</td>
-          <td>${fmtTs(r.updatedAt || r.createdAt)}</td>
-        </tr>
-      `).join('');
-    }
-  }
+  renderCouponCards(rows);
 
   return rows;
 }
 
 async function loadLogs() {
   const box = $('couponLogs');
+  if (!box) return;
+
+  if (isDemoMode()) {
+    const state = getDemoState();
+    const logs = state.logs || [];
+    if (!logs.length) {
+      box.textContent = 'No logs yet.';
+      return;
+    }
+    box.innerHTML = logs.map((l) => `
+      <div class="coupon-log-item">
+        <div>${fmtTs(l.ts)} • <strong>${l.event || '—'}</strong> • ${l.recipient || '—'}</div>
+        <div style="color: var(--tmobile-magenta);">${l.coupon_code || ''}</div>
+      </div>
+    `).join('');
+    return;
+  }
+
   const snap = await getDocs(query(collection(db, LOGS), orderBy('ts', 'desc'), limit(30)));
   const logs = [];
   snap.forEach(d => logs.push(d.data()));
 
-  if (!box) return;
   if (!logs.length) {
     box.textContent = 'No logs yet.';
     return;
   }
-  box.innerHTML = logs.map(l => {
-    const when = fmtTs(l.ts);
-    const who = l.recipient || '—';
-    const what = l.event || '—';
-    const code = l.coupon_code || '';
-    return `<div style="padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.08);">
-      <span style="color: rgba(255,255,255,0.8);">${when}</span>
-      <span style="margin-left: 10px;"><strong>${what}</strong></span>
-      <span style="margin-left: 10px;">${who}</span>
-      <span style="margin-left: 10px; color: var(--tmobile-magenta);">${code}</span>
-    </div>`;
-  }).join('');
+  box.innerHTML = logs.map((l) => `
+    <div class="coupon-log-item">
+      <div>${fmtTs(l.ts)} • <strong>${l.event || '—'}</strong> • ${l.recipient || '—'}</div>
+      <div style="color: var(--tmobile-magenta);">${l.coupon_code || ''}</div>
+    </div>
+  `).join('');
 }
 
 async function saveTuesdayCampaign() {
@@ -156,6 +204,28 @@ async function saveTuesdayCampaign() {
   const posterImageUrl = opt?.dataset?.posterImageUrl || '';
   const posterSlogan = opt?.dataset?.posterSlogan || '';
 
+  if (isDemoMode()) {
+    const state = getDemoState();
+    state.campaigns.unshift({
+      id: `demo_${Date.now()}`,
+      dateYmd: ymd,
+      ad_id: adId,
+      merchant_id: merchantId,
+      poster_image_url: posterImageUrl,
+      poster_slogan: posterSlogan,
+      coupon_code: couponCode,
+      coupon_desc: couponDesc,
+      sent_count: 0,
+      used_count: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    setDemoState(state);
+    setHint('Saved Tuesday campaign in demo mode.');
+    await loadCampaigns();
+    return;
+  }
+
   await addDoc(collection(db, CAMPAIGNS), {
     dateYmd: ymd,
     ad_id: adId,
@@ -170,7 +240,7 @@ async function saveTuesdayCampaign() {
     updatedAt: serverTimestamp()
   });
 
-  setHint('✅ Saved Tuesday campaign.');
+  setHint('Saved Tuesday campaign.');
   await loadCampaigns();
 }
 
@@ -189,26 +259,75 @@ async function demoSendOrUse(eventType) {
   const newSent = eventType === 'sent' ? (oldSent + delta) : oldSent;
   const newUsed = eventType === 'used' ? Math.min(oldUsed + delta, newSent) : oldUsed;
 
-  await updateDoc(doc(db, CAMPAIGNS, latest.id), {
-    sent_count: newSent,
-    used_count: newUsed,
-    updatedAt: serverTimestamp()
-  });
-
-  // Write a few logs
-  for (const r of recipients) {
-    await addDoc(collection(db, LOGS), {
-      campaign_id: latest.id,
-      event: eventType,
-      recipient: r,
-      coupon_code: latest.coupon_code || '',
-      ts: serverTimestamp()
+  if (isDemoMode()) {
+    const state = getDemoState();
+    const idx = state.campaigns.findIndex((c) => c.id === latest.id);
+    if (idx >= 0) {
+      state.campaigns[idx].sent_count = newSent;
+      state.campaigns[idx].used_count = newUsed;
+      state.campaigns[idx].updatedAt = new Date().toISOString();
+    }
+    for (const r of recipients) {
+      state.logs.unshift({
+        campaign_id: latest.id,
+        event: eventType,
+        recipient: r,
+        coupon_code: latest.coupon_code || '',
+        ts: new Date().toISOString()
+      });
+    }
+    state.logs = state.logs.slice(0, 60);
+    setDemoState(state);
+  } else {
+    await updateDoc(doc(db, CAMPAIGNS, latest.id), {
+      sent_count: newSent,
+      used_count: newUsed,
+      updatedAt: serverTimestamp()
     });
+
+    // Write a few logs
+    for (const r of recipients) {
+      await addDoc(collection(db, LOGS), {
+        campaign_id: latest.id,
+        event: eventType,
+        recipient: r,
+        coupon_code: latest.coupon_code || '',
+        ts: serverTimestamp()
+      });
+    }
   }
 
-  setHint(`✅ Demo ${eventType} recorded (+${delta}).`);
+  setHint(`Demo ${eventType} recorded (+${delta}).`);
   await loadCampaigns();
   await loadLogs();
+}
+
+async function ensureDemoSeed() {
+  if (!isDemoMode()) return;
+  const state = getDemoState();
+  if (state.campaigns.length) return;
+  const ymd = yyyymmddFromInput($('tuesdayDate')?.value || '') || '20250715';
+  const ads = await listDemoAdsForDate(ymd);
+  const pick = ads[0] || { ad_id: 'DEMO-AD-001', merchant_id: 'M001', poster_image_url: '', poster_slogan: 'Demo Tuesday Ad' };
+  state.campaigns.push({
+    id: `demo_${Date.now()}`,
+    dateYmd: ymd,
+    ad_id: pick.ad_id,
+    merchant_id: pick.merchant_id,
+    poster_image_url: pick.poster_image_url || '',
+    poster_slogan: pick.poster_slogan || '',
+    coupon_code: 'TUE10',
+    coupon_desc: '10 percent off today only',
+    sent_count: 120,
+    used_count: 26,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+  state.logs = [
+    { campaign_id: state.campaigns[0].id, event: 'sent', recipient: 'M001', coupon_code: 'TUE10', ts: new Date().toISOString() },
+    { campaign_id: state.campaigns[0].id, event: 'used', recipient: 'M007', coupon_code: 'TUE10', ts: new Date().toISOString() }
+  ];
+  setDemoState(state);
 }
 
 async function initTuesdayDefaults() {
@@ -235,6 +354,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   await initTuesdayDefaults();
   await populateAdSelect();
+  await ensureDemoSeed();
   await loadCampaigns();
   await loadLogs();
 
@@ -243,6 +363,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('btnSaveTuesdayCampaign')?.addEventListener('click', saveTuesdayCampaign);
   $('btnDemoSendCoupons')?.addEventListener('click', () => demoSendOrUse('sent'));
   $('btnDemoMarkUsed')?.addEventListener('click', () => demoSendOrUse('used'));
+
+  window.addEventListener('admin-demo-mode-changed', async (evt) => {
+    if (evt?.detail?.enabled) {
+      await ensureDemoSeed();
+    }
+    await populateAdSelect();
+    await loadCampaigns();
+    await loadLogs();
+  });
 });
 
 

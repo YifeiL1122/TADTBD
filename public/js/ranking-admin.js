@@ -84,50 +84,110 @@ function renderKpis(auctionRows) {
 }
 
 function renderMerchantTable(merchantRows) {
-  const tbody = $('rankingMerchantTableBody');
-  if (!tbody) return;
+  const cards = $('rankingMerchantCards');
+  const tbody = $('rankingMerchantTableBody'); // backward compatibility
+  const maxSpend = Math.max(1, ...merchantRows.map((r) => Number(r.total_spend_usd || 0)));
+  const maxImps = Math.max(1, ...merchantRows.map((r) => Number(r.total_impressions || 0)));
+  if (!cards && !tbody) return;
   if (!merchantRows.length) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 40px;">No merchant summary</td></tr>';
+    if (cards) cards.innerHTML = '<div class="viz-empty">No merchant summary</div>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 40px;">No merchant summary</td></tr>';
     return;
   }
-  const top = merchantRows.slice(0, 30);
-  tbody.innerHTML = top.map(r => `
-    <tr>
-      <td>
-        <div class="user-cell">
-          <div><strong>${r.merchant_email || r.merchant_id}</strong></div>
-          <div class="user-email">ID: ${String(r.merchant_id).slice(0, 10)}...</div>
+  const top = merchantRows.slice(0, 24);
+
+  if (cards) {
+    cards.innerHTML = top.map((r) => {
+      const spend = Number(r.total_spend_usd || 0);
+      const imps = Number(r.total_impressions || 0);
+      const wins = Number(r.wins || 0);
+      const spendPct = Math.max(4, Math.round((spend / maxSpend) * 100));
+      const impsPct = Math.max(4, Math.round((imps / maxImps) * 100));
+      return `
+        <div class="viz-card">
+          <div class="viz-card-title">${r.merchant_email || r.merchant_id}</div>
+          <div class="viz-card-sub">ID: ${String(r.merchant_id).slice(0, 12)}</div>
+          <div class="viz-metric-row"><span>Spend</span><span>$${spend.toLocaleString()}</span></div>
+          <div class="viz-progress"><span style="width:${spendPct}%"></span></div>
+          <div class="viz-metric-row"><span>Impressions</span><span>${imps.toLocaleString()}</span></div>
+          <div class="viz-progress"><span style="width:${impsPct}%"></span></div>
+          <div class="viz-chip-row">
+            <span class="viz-chip">Wins ${wins.toLocaleString()}</span>
+          </div>
         </div>
-      </td>
-      <td>$${Number(r.total_spend_usd || 0).toLocaleString()}</td>
-      <td>${Number(r.total_impressions || 0).toLocaleString()}</td>
-      <td>${Number(r.wins || 0).toLocaleString()}</td>
-    </tr>
-  `).join('');
+      `;
+    }).join('');
+  }
+
+  if (tbody) {
+    tbody.innerHTML = top.map(r => `
+      <tr>
+        <td>
+          <div class="user-cell">
+            <div><strong>${r.merchant_email || r.merchant_id}</strong></div>
+            <div class="user-email">ID: ${String(r.merchant_id).slice(0, 10)}...</div>
+          </div>
+        </td>
+        <td>$${Number(r.total_spend_usd || 0).toLocaleString()}</td>
+        <td>${Number(r.total_impressions || 0).toLocaleString()}</td>
+        <td>${Number(r.wins || 0).toLocaleString()}</td>
+      </tr>
+    `).join('');
+  }
 }
 
 function renderAuctionTable(auctionRows) {
-  const tbody = $('rankingAuctionTableBody');
-  if (!tbody) return;
+  const cards = $('rankingAuctionCards');
+  const tbody = $('rankingAuctionTableBody'); // backward compatibility
+  const maxCost = Math.max(1, ...auctionRows.map((r) => Number(r.cost_usd || 0)));
+  if (!cards && !tbody) return;
   if (!auctionRows.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 40px;">No auction winners</td></tr>';
+    if (cards) cards.innerHTML = '<div class="viz-empty">No auction winners</div>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 40px;">No auction winners</td></tr>';
     return;
   }
-  const top = auctionRows.slice(0, 200);
-  tbody.innerHTML = top.map(r => `
-    <tr>
-      <td>${r.zipcode}</td>
-      <td>${r.date}</td>
-      <td>${r.time_slot}</td>
-      <td>${r.position}</td>
-      <td>${r.merchant_email || r.merchant_id}</td>
-      <td>${r.poster_slogan || r.ad_code}</td>
-      <td>${r.bid_cpm}</td>
-      <td>${r.pay_cpm}</td>
-      <td>${r.impressions}</td>
-      <td>$${r.cost_usd}</td>
-    </tr>
-  `).join('');
+  const top = auctionRows.slice(0, 60);
+
+  if (cards) {
+    cards.innerHTML = top.map((r) => {
+      const cost = Number(r.cost_usd || 0);
+      const costPct = Math.max(5, Math.round((cost / maxCost) * 100));
+      return `
+        <div class="viz-card">
+          <div class="viz-card-title">${r.poster_slogan || r.ad_code}</div>
+          <div class="viz-card-sub">${r.merchant_email || r.merchant_id}</div>
+          <div class="viz-chip-row" style="margin-bottom: 8px;">
+            <span class="viz-chip">ZIP ${r.zipcode}</span>
+            <span class="viz-chip">Date ${r.date}</span>
+            <span class="viz-chip">Slot ${r.time_slot}</span>
+            <span class="viz-chip">Pos ${r.position}</span>
+          </div>
+          <div class="viz-metric-row"><span>Bid CPM</span><span>${Number(r.bid_cpm || 0).toFixed(2)}</span></div>
+          <div class="viz-metric-row"><span>Pay CPM</span><span>${Number(r.pay_cpm || 0).toFixed(2)}</span></div>
+          <div class="viz-metric-row"><span>Impressions</span><span>${Number(r.impressions || 0).toLocaleString()}</span></div>
+          <div class="viz-metric-row"><span>Cost</span><span>$${cost.toFixed(2)}</span></div>
+          <div class="viz-progress"><span style="width:${costPct}%"></span></div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  if (tbody) {
+    tbody.innerHTML = top.map(r => `
+      <tr>
+        <td>${r.zipcode}</td>
+        <td>${r.date}</td>
+        <td>${r.time_slot}</td>
+        <td>${r.position}</td>
+        <td>${r.merchant_email || r.merchant_id}</td>
+        <td>${r.poster_slogan || r.ad_code}</td>
+        <td>${r.bid_cpm}</td>
+        <td>${r.pay_cpm}</td>
+        <td>${r.impressions}</td>
+        <td>$${r.cost_usd}</td>
+      </tr>
+    `).join('');
+  }
 }
 
 function renderTuesdayWinner(auctionRows, isTuesdayMode) {
@@ -334,7 +394,8 @@ async function loadLatestRun() {
   renderCharts(auctionRows, merchantRows);
 }
 
-async function runRanking() {
+async function runRanking(opts = {}) {
+  const { skipSave = false, silent = false } = opts;
   ensureDefaultDate();
   const targetDate = $('rankingDate').value;
   const isTuesdayMode = Boolean($('rankingUseTuesday')?.checked);
@@ -384,15 +445,24 @@ async function runRanking() {
     renderTuesdayWinner(auctionRows, isTuesdayMode);
     renderCharts(auctionRows, merchantRows);
 
-    const runId = await saveRankingRun(targetYmd, reserveCpm, statusMode, auctionRows, merchantRows);
-    alert(`✅ Ranking run saved. runId=${runId}`);
+    if (!skipSave) {
+      const runId = await saveRankingRun(targetYmd, reserveCpm, statusMode, auctionRows, merchantRows);
+      if (!silent) alert(`Ranking run saved. runId=${runId}`);
+    }
   } catch (e) {
     console.error(e);
-    alert('Ranking failed: ' + (e?.message || e));
+    if (!silent) alert('Ranking failed: ' + (e?.message || e));
   } finally {
     btn.disabled = false;
     btn.textContent = 'Run Ranking';
   }
+}
+
+async function renderDemoRankingInstantly() {
+  if (!$('rankingDataSource')) return;
+  $('rankingDataSource').value = 'csv_demo';
+  if ($('rankingStatusFilter')) $('rankingStatusFilter').value = 'all';
+  await runRanking({ skipSave: true, silent: true });
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -430,6 +500,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
   $('btnRunRanking').addEventListener('click', runRanking);
   $('btnLoadLatestRanking').addEventListener('click', loadLatestRun);
+
+  window.addEventListener('admin-demo-mode-changed', async (evt) => {
+    if (evt?.detail?.enabled) {
+      await renderDemoRankingInstantly();
+    }
+  });
+
+  if (localStorage.getItem('adminDemoMode') !== 'false') {
+    setTimeout(() => { renderDemoRankingInstantly(); }, 250);
+  }
 });
 
 
