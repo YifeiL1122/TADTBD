@@ -100,8 +100,17 @@
 }
 
 .mega-kpi-icon {
-    font-size: 2.5em;
-    filter: drop-shadow(0 0 10px rgba(226, 0, 116, 0.5));
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #e20074 0%, #a8005a 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    font-weight: 800;
 }
 
 .mega-kpi-content {
@@ -141,6 +150,68 @@
 .mega-kpi-trend.negative {
     background: rgba(255, 68, 68, 0.1);
     color: #FF4444;
+}
+
+.biddings-table th,
+.biddings-table td {
+    padding: 14px 12px;
+}
+
+.market-chips {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #f7d6e8;
+}
+
+.metric-line {
+    margin-bottom: 8px;
+}
+
+.metric-line:last-child {
+    margin-bottom: 0;
+}
+
+.metric-line-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: #d7d7d7;
+    margin-bottom: 4px;
+}
+
+.metric-track {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+}
+
+.metric-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #e20074 0%, #ff2d92 100%);
+}
+
+.status-pending {
+    background: rgba(143, 89, 214, 0.18);
+    color: #d9b8ff;
+}
+
+.status-active {
+    background: rgba(226, 0, 116, 0.22);
+    color: #ffd1e9;
+}
+
+.status-completed {
+    background: rgba(255, 255, 255, 0.14);
+    color: #e7e7e7;
+}
+
+.status-rejected {
+    background: rgba(199, 33, 93, 0.2);
+    color: #ffafcf;
 }
 
 .mega-kpi-card canvas {

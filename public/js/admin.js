@@ -218,7 +218,7 @@ function checkAdminSession() {
     const session = localStorage.getItem('adminSession');
 
     if (!session) {
-        console.log('❌ No admin session found');
+        console.log('No admin session found');
         window.location.href = '/admin-login.html';
         return false;
     }
@@ -232,13 +232,13 @@ function checkAdminSession() {
         const hoursDiff = (now - loginTime) / (1000 * 60 * 60);
 
         if (hoursDiff >= 24) {
-            console.log('❌ Admin session expired');
+            console.log('Admin session expired');
             localStorage.removeItem('adminSession');
             window.location.href = '/admin-login.html';
             return false;
         }
 
-        console.log('✅ Admin authenticated:', adminSession.username);
+        console.log('Admin authenticated:', adminSession.username);
 
         // Update user display
         const userDisplay = document.querySelector('.user-display');
@@ -249,7 +249,7 @@ function checkAdminSession() {
         return true;
 
     } catch (error) {
-        console.error('❌ Invalid session:', error);
+        console.error('Invalid session:', error);
         localStorage.removeItem('adminSession');
         window.location.href = '/admin-login.html';
         return false;
@@ -271,11 +271,11 @@ window.addEventListener('DOMContentLoaded', function() {
                 
                 // Clear current data immediately
                 const tbody = document.getElementById('biddingsTableBody');
-                if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 40px;"><div class="demo-spinner" style="width:40px;height:40px;margin:0 auto 15px;"></div>Loading data...</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;"><div class="demo-spinner" style="width:40px;height:40px;margin:0 auto 15px;"></div>Loading data...</td></tr>';
                 const dtbody = document.getElementById('deploymentsTableBody');
-                if (dtbody) dtbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 40px;"><div class="demo-spinner" style="width:40px;height:40px;margin:0 auto 15px;"></div>Loading data...</td></tr>';
+                if (dtbody) dtbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;"><div class="demo-spinner" style="width:40px;height:40px;margin:0 auto 15px;"></div>Loading data...</td></tr>';
                 const timeline = document.getElementById('scheduleTimeline');
-                if (timeline) timeline.innerHTML = '<p style="color: var(--tmobile-light-gray); padding: 40px; text-align: center;"><div class="demo-spinner" style="width:40px;height:40px;margin:0 auto 15px;"></div>Loading schedule...</p>';
+                if (timeline) timeline.innerHTML = '<div style="color: var(--tmobile-light-gray); padding: 40px; text-align: center;"><div class="demo-spinner" style="width:40px;height:40px;margin:0 auto 15px;"></div>Loading schedule...</div>';
 
                 // Reload everything (swap between real/demo)
                 try {
@@ -327,7 +327,7 @@ function renderAnalyticsCharts() {
     const cMix = document.getElementById('chartStatusMix');
     const cZip = document.getElementById('chartTopZipcodes');
     if (!cRev || !cMix || !cZip) {
-        console.log('⏸️ Analytics charts skipped (canvas not in DOM yet)');
+        console.log('Analytics charts skipped (canvas not in DOM yet)');
         return;
     }
     if (!safeChart()) {
@@ -350,7 +350,7 @@ function renderAnalyticsCharts() {
         // If all dates are zero (demo data createdAt outside 7-day window), spread bidAmount across 7 days
         const totalRev = Array.from(revenueMap.values()).reduce((a, b) => a + b, 0);
         if (totalRev === 0 && allBiddings.length > 0) {
-            console.log('📊 No revenue in last 7 days, spreading demo data evenly');
+            console.log('No revenue in last 7 days, spreading data evenly');
             const avgPerDay = Math.round(allBiddings.reduce((s, b) => s + (b.bidAmount || 0), 0) / labels7.length);
             labels7.forEach((d, i) => revenueMap.set(d, avgPerDay + Math.round(Math.sin(i) * avgPerDay * 0.3)));
         }
@@ -359,7 +359,7 @@ function renderAnalyticsCharts() {
         labels7.forEach((d, i) => revenueMap.set(d, Math.round(80 + 40 * Math.sin(i / 2) + 20 * (i % 3))));
     }
     const revenueData = labels7.map(d => Number((revenueMap.get(d) || 0).toFixed(0)));
-    console.log('📊 Revenue chart data:', revenueData);
+    console.log('Revenue chart data:', revenueData);
     setHint('chartRevenue7dHint', hasData ? (isUsingDemoData ? 'Demo mode: synthetic distribution' : 'Source: bids.createdAt + bidAmount') : 'Demo mode: fake data');
 
     // Status mix
@@ -385,7 +385,7 @@ function renderAnalyticsCharts() {
         statusCounts.rejected = 1;
     }
     const mixData = statuses.map(s => statusCounts[s]);
-    console.log('📊 Status mix data:', statusCounts);
+    console.log('Status mix data:', statusCounts);
     setHint('chartStatusMixHint', hasData ? (isUsingDemoData ? 'Demo mode: from dataset' : 'Source: bids.status') : 'Demo mode: fake data');
 
     // Top zipcodes by # campaigns
@@ -397,7 +397,7 @@ function renderAnalyticsCharts() {
         }
         // Fallback if no zipcodes found
         if (zipCount.size === 0 && allBiddings.length > 0) {
-            console.log('📊 No zipcodes found, using demo fallback');
+            console.log('No zipcodes found, using demo fallback');
             ['98101','10001','90001','60601','77001','78701'].forEach((z, i) => zipCount.set(z, 10 - i));
         }
     } else {
@@ -406,7 +406,7 @@ function renderAnalyticsCharts() {
     const zipArr = Array.from(zipCount.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
     const zipLabels = zipArr.map(([z]) => z);
     const zipData = zipArr.map(([, c]) => c);
-    console.log('📊 Zipcode chart data:', zipLabels, zipData);
+    console.log('Zipcode chart data:', zipLabels, zipData);
     setHint('chartTopZipcodesHint', hasData ? (isUsingDemoData ? 'Demo mode: from dataset' : 'Source: bids.zipcodes / bids.zipcode') : 'Demo mode: fake data');
 
     // Render charts
@@ -589,14 +589,14 @@ async function loadAllBiddings() {
         const toggle = document.getElementById('adminDemoMode');
         if (toggle && isUsingDemoData) toggle.checked = true;
 
-        console.log('✅ Loaded', allBiddings.length, 'biddings');
+        console.log('Loaded', allBiddings.length, 'biddings');
         updateStatistics();
         displayBiddings();
         displaySchedule();
         renderAnalyticsCharts();
 
     } catch (error) {
-        console.error('❌ Error loading biddings:', error);
+        console.error('Error loading biddings:', error);
         // Safe demo fallback
         setDemoMode(true);
         isUsingDemoData = true;
@@ -650,13 +650,33 @@ function updateStatistics() {
     renderSparklines(allBiddings);
 }
 
+function renderMetricBar(value, max, label) {
+    const safeMax = Math.max(1, Number(max) || 1);
+    const safeVal = Math.max(0, Number(value) || 0);
+    const pct = Math.min(100, Math.round((safeVal / safeMax) * 100));
+    return `
+        <div class="metric-line">
+            <div class="metric-line-head">
+                <span>${label}</span>
+                <span>${safeVal.toLocaleString()}</span>
+            </div>
+            <div class="metric-track">
+                <div class="metric-fill" style="width:${pct}%"></div>
+            </div>
+        </div>
+    `;
+}
+
 // Display biddings in table
 function displayBiddings(filteredBiddings = null) {
     const biddings = filteredBiddings || allBiddings;
     const tbody = document.getElementById('biddingsTableBody');
+    if (!tbody) return;
+    const maxBid = Math.max(1, ...biddings.map((b) => Number(b.bidAmount) || 0));
+    const maxReach = Math.max(1, ...biddings.map((b) => Number(b.estimatedReach) || 0));
 
     if (biddings.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">No campaigns found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px;">No campaigns found</td></tr>';
         return;
     }
 
@@ -667,20 +687,23 @@ function displayBiddings(filteredBiddings = null) {
 
         return `
             <tr>
-                <td><strong>#${bid.id.slice(-6)}</strong></td>
+                <td>
+                    <div><strong>#${bid.id.slice(-6)}</strong></div>
+                    <div class="user-email">${bid.startDate} to ${bid.endDate}</div>
+                </td>
                 <td>
                     <div class="user-cell">
                         <div>${bid.userEmail || 'Unknown'}</div>
                         <div class="user-email">ID: ${bid.userId?.slice(0, 8)}...</div>
                     </div>
                 </td>
-                <td>${zipcodes}</td>
                 <td>
-                    <div>${bid.startDate}</div>
-                    <div style="font-size: 0.85em; color: var(--tmobile-gray);">to ${bid.endDate}</div>
+                    <div class="market-chips">${zipcodes}</div>
                 </td>
-                <td><strong>$${bid.bidAmount}</strong></td>
-                <td>${(bid.estimatedReach || 0).toLocaleString()}</td>
+                <td>
+                    ${renderMetricBar(Number(bid.bidAmount || 0), maxBid, 'Bid')}
+                    ${renderMetricBar(Number(bid.estimatedReach || 0), maxReach, 'Reach')}
+                </td>
                 <td><span class="status-badge status-${bid.status || 'pending'}">${(bid.status || 'pending').toUpperCase()}</span></td>
                 <td>
                     <div class="action-btns">
@@ -774,12 +797,17 @@ window.filterBiddings = function() {
 };
 
 // Switch tabs
-window.switchTab = function(tabName) {
+window.switchTab = function(tabName, tabElement) {
     // Update tab buttons
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
     });
-    event.target.classList.add('active');
+    if (tabElement) {
+        tabElement.classList.add('active');
+    } else {
+        const matched = Array.from(document.querySelectorAll('.tab')).find(t => t.getAttribute('onclick')?.includes(`'${tabName}'`));
+        if (matched) matched.classList.add('active');
+    }
 
     // Update tab content
     document.querySelectorAll('.tab-content').forEach(content => {
@@ -867,12 +895,12 @@ window.saveEdit = async function() {
 
     try {
         await updateDoc(doc(db, 'bids', currentEditId), updates);
-        console.log('✅ Bidding updated');
+        console.log('Bidding updated');
         alert('Campaign updated successfully!');
         closeEditModal();
         loadAllBiddings();
     } catch (error) {
-        console.error('❌ Error updating bidding:', error);
+        console.error('Error updating bidding:', error);
         alert('Error updating campaign: ' + error.message);
     }
 };
@@ -881,7 +909,7 @@ window.saveEdit = async function() {
 window.signOutUser = function() {
     if (confirm('Are you sure you want to logout?')) {
         localStorage.removeItem('adminSession');
-        console.log('✅ Admin logged out');
+        console.log('Admin logged out');
         window.location.href = '/admin-login.html';
     }
 };
@@ -910,12 +938,12 @@ window.updateStatus = async function(bidId, newStatus) {
             updatedBy: adminSession ? adminSession.username : 'admin'
         });
 
-        console.log('✅ Status updated to', newStatus);
+        console.log('Status updated to', newStatus);
         alert(`Campaign ${action}d successfully!`);
         loadAllBiddings();
 
     } catch (error) {
-        console.error('❌ Error updating status:', error);
+        console.error('Error updating status:', error);
         alert('Error updating status: ' + error.message);
     }
 };
@@ -947,11 +975,11 @@ async function loadAllDeployments() {
         const toggle = document.getElementById('adminDemoMode');
         if (toggle && isUsingDemoData) toggle.checked = true;
 
-        console.log('✅ Loaded', allDeployments.length, 'deployments');
+        console.log('Loaded', allDeployments.length, 'deployments');
         displayDeployments();
 
     } catch (error) {
-        console.error('❌ Error loading deployments:', error);
+        console.error('Error loading deployments:', error);
         // Safe demo fallback
         setDemoMode(true);
         isUsingDemoData = true;
@@ -969,30 +997,24 @@ function displayDeployments(filteredDeployments = null) {
     if (!tbody) return;
 
     if (deployments.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">No deployments yet</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px;">No deployments yet</td></tr>';
         return;
     }
 
     tbody.innerHTML = deployments.map(deploy => {
         const deployedAt = new Date(deploy.deployedAt).toLocaleString();
-        const progress = deploy.targetDevices > 0
-            ? Math.round((deploy.activeDevices / deploy.targetDevices) * 100)
-            : 0;
 
         return `
             <tr>
                 <td><strong>#${deploy.id.slice(-6)}</strong></td>
-                <td>${deploy.campaignName || 'N/A'}</td>
                 <td>
-                    <div class="user-cell">
-                        <div>${deploy.userEmail || 'Unknown'}</div>
-                    </div>
+                    <div>${deploy.campaignName || 'N/A'}</div>
+                    <div class="user-email">${deploy.userEmail || 'Unknown'}</div>
                 </td>
                 <td>${deploy.zipcodes?.join(', ') || 'N/A'}</td>
-                <td>${deploy.targetDevices || 0}</td>
                 <td>
-                    <div>${deploy.activeDevices || 0}</div>
-                    <div style="font-size: 0.85em; color: var(--tmobile-gray);">${progress}%</div>
+                    ${renderMetricBar(Number(deploy.activeDevices || 0), Number(deploy.targetDevices || 0), 'Active')}
+                    <div style="font-size: 0.8em; color: var(--tmobile-gray); margin-top: 6px;">${deploy.activeDevices || 0}/${deploy.targetDevices || 0} devices</div>
                 </td>
                 <td><span class="status-badge status-${deploy.status || 'pending'}">${(deploy.status || 'pending').toUpperCase()}</span></td>
                 <td style="font-size: 0.85em;">${deployedAt}</td>

@@ -83,8 +83,8 @@ function updateTrendElement(id, percent) {
     if (!el) return;
     
     const isPositive = percent >= 0;
-    const arrow = isPositive ? '↑' : '↓';
-    el.textContent = `${arrow} ${Math.abs(percent)}%`;
+    const marker = isPositive ? 'UP' : 'DOWN';
+    el.textContent = `${marker} ${Math.abs(percent)}%`;
     el.className = 'mega-kpi-trend ' + (isPositive ? '' : 'negative');
 }
 
@@ -199,7 +199,7 @@ export function renderPerformanceHeatmap(biddings) {
     const maxCount = Math.max(...slots.map(s => s.count), 1);
     
     container.innerHTML = slots.map(slot => {
-        const intensity = Math.ceil((slot.count / maxCount) * 5);
+        const intensity = Math.max(1, Math.ceil((slot.count / maxCount) * 5));
         return `
             <div class="heatmap-cell intensity-${intensity}" title="${slot.label}: ${slot.count} campaigns">
                 <div style="font-size: 0.7em;">${slot.label.split(':')[0]}</div>
@@ -231,14 +231,15 @@ export function renderCampaignTimeline(biddings) {
     container.innerHTML = activeCampaigns.map(campaign => {
         const start = new Date(campaign.startDate);
         const end = new Date(campaign.endDate);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
         
         // Calculate position and width
         const totalDays = 7;
         const startOffset = Math.max(0, (start - today) / (24 * 60 * 60 * 1000));
-        const duration = (end - start) / (24 * 60 * 60 * 1000);
+        const duration = Math.max(1, (end - start) / (24 * 60 * 60 * 1000));
         
-        const left = (startOffset / totalDays) * 100;
-        const width = Math.min((duration / totalDays) * 100, 100 - left);
+        const left = Math.min(100, Math.max(0, (startOffset / totalDays) * 100));
+        const width = Math.min(100 - left, Math.max(6, (duration / totalDays) * 100));
         
         return `
             <div class="timeline-bar">
@@ -261,10 +262,10 @@ export function renderCampaignFunnel(biddings) {
     const completed = biddings.filter(b => b.status === 'completed').length;
     
     const stages = [
-        { label: '📝 Submitted', value: total, width: 100 },
-        { label: '⏳ Pending Review', value: pending, width: total > 0 ? (pending / total) * 100 : 0 },
-        { label: '✅ Active', value: active, width: total > 0 ? (active / total) * 100 : 0 },
-        { label: '🎯 Completed', value: completed, width: total > 0 ? (completed / total) * 100 : 0 }
+        { label: 'Submitted', value: total, width: 100 },
+        { label: 'Pending Review', value: pending, width: total > 0 ? (pending / total) * 100 : 0 },
+        { label: 'Active', value: active, width: total > 0 ? (active / total) * 100 : 0 },
+        { label: 'Completed', value: completed, width: total > 0 ? (completed / total) * 100 : 0 }
     ];
     
     container.innerHTML = stages.map((stage, index) => {

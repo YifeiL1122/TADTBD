@@ -279,7 +279,7 @@
         <div class="demo-loading-content">
             <div class="demo-spinner"></div>
             <div class="demo-loading-text">Loading Demo Data</div>
-            <div class="demo-loading-subtitle">Fetching 240 campaigns from dataset...</div>
+            <div class="demo-loading-subtext">Fetching 240 campaigns from dataset...</div>
         </div>
     </div>
 
@@ -297,7 +297,7 @@
                 <li><a href="/admin.html" class="navbar-link active">Admin Dashboard</a></li>
             </ul>
             <div class="user-info">
-                <span class="admin-badge">👑 Admin</span>
+                <span class="admin-badge">Admin</span>
                 <span style="font-size: 0.8em; color: rgba(255,255,255,0.85); padding: 6px 12px; border: 1px solid rgba(255,255,255,0.35); border-radius: 20px;">
                     build: 2026-02-11.1
                 </span>
@@ -312,14 +312,14 @@
         <div class="page-header">
             <div class="page-header-content">
                 <h1 style="display: flex; align-items: center; gap: 12px;">
-                    📊 Dashboard
+                    Dashboard
                     <span id="demoDataBadge" class="status-badge status-active" style="display:none; font-size: 0.45em;">DEMO</span>
                 </h1>
             </div>
             <div style="display:flex; align-items:center; gap: 12px; flex-wrap: wrap;">
                 <label style="display:flex; align-items:center; gap: 10px; color: var(--tmobile-light-gray); user-select:none; cursor: pointer;">
                     <input type="checkbox" id="adminDemoMode" style="width:18px; height:18px;">
-                    🎭 Demo Mode
+                    Demo Mode
                 </label>
             </div>
         </div>
@@ -327,7 +327,7 @@
         <!-- Mega KPI Cards -->
         <div class="mega-kpi-grid">
             <div class="mega-kpi-card">
-                <div class="mega-kpi-icon">💰</div>
+                <div class="mega-kpi-icon">REV</div>
                 <div class="mega-kpi-content">
                     <div class="mega-kpi-value" id="totalRevenue">$0</div>
                     <div class="mega-kpi-label">Total Revenue</div>
@@ -337,7 +337,7 @@
             </div>
             
             <div class="mega-kpi-card">
-                <div class="mega-kpi-icon">📊</div>
+                <div class="mega-kpi-icon">CMP</div>
                 <div class="mega-kpi-content">
                     <div class="mega-kpi-value" id="totalBiddings">0</div>
                     <div class="mega-kpi-label">Campaigns</div>
@@ -347,7 +347,7 @@
             </div>
 
             <div class="mega-kpi-card">
-                <div class="mega-kpi-icon">✅</div>
+                <div class="mega-kpi-icon">ACT</div>
                 <div class="mega-kpi-content">
                     <div class="mega-kpi-value" id="activeBiddings">0</div>
                     <div class="mega-kpi-label">Active Now</div>
@@ -357,7 +357,7 @@
             </div>
 
             <div class="mega-kpi-card">
-                <div class="mega-kpi-icon">⏳</div>
+                <div class="mega-kpi-icon">PND</div>
                 <div class="mega-kpi-content">
                     <div class="mega-kpi-value" id="pendingBiddings">0</div>
                     <div class="mega-kpi-label">Pending</div>
@@ -367,7 +367,7 @@
             </div>
 
             <div class="mega-kpi-card">
-                <div class="mega-kpi-icon">👁️</div>
+                <div class="mega-kpi-icon">IMP</div>
                 <div class="mega-kpi-content">
                     <div class="mega-kpi-value" id="totalImpressions">0</div>
                     <div class="mega-kpi-label">Impressions</div>
@@ -381,7 +381,7 @@
         <div class="heatmap-container">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <div>
-                    <div style="font-weight: 700; font-size: 1.2em;">🔥 Hourly Performance Heatmap</div>
+                    <div style="font-weight: 700; font-size: 1.2em;">Hourly Performance Heatmap</div>
                     <div style="color: #aaaaaa; font-size: 0.9em;">Campaign activity by time slot</div>
                 </div>
             </div>
@@ -392,7 +392,7 @@
         <div class="timeline-container">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <div>
-                    <div style="font-weight: 700; font-size: 1.2em;">📅 Active Campaign Timeline</div>
+                    <div style="font-weight: 700; font-size: 1.2em;">Active Campaign Timeline</div>
                     <div style="color: #aaaaaa; font-size: 0.9em;">Visual schedule of running campaigns</div>
                 </div>
             </div>
@@ -403,7 +403,7 @@
         <div class="funnel-container">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <div>
-                    <div style="font-weight: 700; font-size: 1.2em;">🎯 Campaign Funnel</div>
+                    <div style="font-weight: 700; font-size: 1.2em;">Campaign Funnel</div>
                     <div style="color: #aaaaaa; font-size: 0.9em;">From submission to deployment</div>
                 </div>
             </div>
@@ -412,11 +412,11 @@
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('all-biddings')">📊 Campaigns</button>
-            <button class="tab" onclick="switchTab('deployments')">📱 Devices</button>
-            <button class="tab" onclick="switchTab('schedule')">📅 Schedule</button>
-            <button class="tab" onclick="switchTab('ranking')">🏆 Ranking</button>
-            <button class="tab" onclick="switchTab('analytics')">📈 Analytics</button>
+            <button class="tab active" onclick="switchTab('all-biddings', this)">Campaigns</button>
+            <button class="tab" onclick="switchTab('deployments', this)">Devices</button>
+            <button class="tab" onclick="switchTab('schedule', this)">Schedule</button>
+            <button class="tab" onclick="switchTab('ranking', this)">Ranking</button>
+            <button class="tab" onclick="switchTab('analytics', this)">Analytics</button>
         </div>
 
         <!-- All Biddings Tab -->
@@ -437,19 +437,17 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Campaign ID</th>
-                            <th>User</th>
-                            <th>Locations</th>
-                            <th>Duration</th>
-                            <th>Bid Amount</th>
-                            <th>Reach</th>
+                            <th>Campaign</th>
+                            <th>Merchant</th>
+                            <th>Market</th>
+                            <th>Performance</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="biddingsTableBody">
                         <tr>
-                            <td colspan="8" style="text-align: center; padding: 40px;">Loading campaigns...</td>
+                            <td colspan="6" style="text-align: center; padding: 40px;">Loading campaigns...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -465,19 +463,17 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Deployment ID</th>
+                            <th>Deployment</th>
                             <th>Campaign</th>
-                            <th>User</th>
-                            <th>Regions</th>
-                            <th>Target Devices</th>
-                            <th>Active Devices</th>
+                            <th>Region</th>
+                            <th>Coverage</th>
                             <th>Status</th>
-                            <th>Deployed At</th>
+                            <th>Updated</th>
                         </tr>
                     </thead>
                     <tbody id="deploymentsTableBody">
                         <tr>
-                            <td colspan="8" style="text-align: center; padding: 40px;">Loading deployments...</td>
+                            <td colspan="6" style="text-align: center; padding: 40px;">Loading deployments...</td>
                         </tr>
                     </tbody>
                 </table>
