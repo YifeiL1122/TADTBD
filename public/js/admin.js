@@ -31,8 +31,10 @@ const DEMO_MODE_KEY = 'adminDemoMode';
 let isUsingDemoData = false;
 
 function getDemoMode() {
-    // Explicit toggle OR auto when there is no data.
-    return localStorage.getItem(DEMO_MODE_KEY) === 'true';
+    // Default ON for dashboard demo branch unless explicitly turned off.
+    const stored = localStorage.getItem(DEMO_MODE_KEY);
+    if (stored === null) return true;
+    return stored === 'true';
 }
 
 function setDemoMode(on) {
@@ -288,6 +290,8 @@ window.addEventListener('DOMContentLoaded', function() {
         }
         loadAllBiddings();
         loadAllDeployments();
+        // Ensure first tab works even before user clicks.
+        window.switchTab('all-biddings');
     }
 });
 

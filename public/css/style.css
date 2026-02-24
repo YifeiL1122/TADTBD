@@ -1,0 +1,168 @@
+:root {
+    --tmobile-magenta: #e20074;
+    --tmobile-dark-magenta: #a8005a;
+    --tmobile-light-magenta: #ff2d92;
+    --tmobile-black: #050507;
+    --tmobile-dark-gray: #101217;
+    --tmobile-gray: #2a2f3a;
+    --tmobile-light-gray: #b8beca;
+    --tmobile-white: #f8faff;
+    --success-green: #10b981;
+    --warning-orange: #f59e0b;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: radial-gradient(1000px 500px at 10% 0%, #2a1030 0%, #090b0f 55%, #050507 100%);
+    color: var(--tmobile-white);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+    background: rgba(8, 10, 14, 0.88);
+    border-bottom: 1px solid rgba(226, 0, 116, 0.25);
+}
+
+.navbar-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    min-width: 230px;
+}
+
+.navbar-logo {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+}
+
+.navbar-tagline {
+    margin-top: 2px;
+    font-size: 0.78rem;
+    color: var(--tmobile-light-gray);
+}
+
+.navbar-menu {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 8px;
+}
+
+.navbar-link {
+    display: inline-flex;
+    align-items: center;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 10px;
+    color: var(--tmobile-light-gray);
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.navbar-link:hover {
+    color: var(--tmobile-white);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.navbar-link.active {
+    color: #ffd7ec;
+    border-color: rgba(226, 0, 116, 0.45);
+    background: rgba(226, 0, 116, 0.14);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-width: 280px;
+}
+
+.user-display {
+    font-size: 0.9rem;
+    color: var(--tmobile-light-gray);
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-nav-logout {
+    border: 0;
+    border-radius: 10px;
+    height: 38px;
+    padding: 0 14px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--tmobile-magenta) 0%, var(--tmobile-light-magenta) 100%);
+    color: #fff;
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--tmobile-white);
+}
+
+.btn-nav-logout {
+    background: rgba(226, 0, 116, 0.16);
+    color: #ffe0f0;
+    border: 1px solid rgba(226, 0, 116, 0.45);
+}
+
+.btn-primary:hover,
+.btn-secondary:hover,
+.btn-nav-logout:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+}
+
+code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 6px;
+    border-radius: 6px;
+}
+
+@media (max-width: 980px) {
+    .navbar-container {
+        flex-wrap: wrap;
+    }
+    .navbar-brand,
+    .user-info {
+        min-width: auto;
+        width: 100%;
+    }
+    .navbar-menu {
+        order: 3;
+        width: 100%;
+    }
+}
