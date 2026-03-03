@@ -2,6 +2,7 @@
 // Source file (copied into Firebase Hosting): /public/data/ads_input_1000_local_usd_week_8slots_varslots_clean.csv
 
 export const DEMO_CSV_PATH = '/data/ads_input_1000_local_usd_week_8slots_varslots_clean.csv';
+import { getMerchantName, getMerchantEmail } from './demo-merchants.js';
 
 let _cache = null;
 
@@ -100,12 +101,12 @@ export async function buildBidRowsFromDemoCsv(targetDateYmd) {
         date: String(targetDateYmd),
         time_slot: Number(s.time_slot),
         merchant_id: String(r.merchant_id),
-        merchant_email: '',
+        merchant_email: getMerchantEmail(r.merchant_id),
         ad_code: String(r.ad_id),
         bid_cpm: Number(s.bid_cpm),
         campaign_id: String(r.ad_id),
         poster_image_url: pickPosterImageUrl(r.merchant_id),
-        poster_slogan: `Merchant ${r.merchant_id} • ${r.ad_id}`
+        poster_slogan: `${getMerchantName(r.merchant_id)} • ${r.ad_id}`
       });
     }
   }
@@ -120,9 +121,10 @@ export async function listDemoAdsForDate(targetDateYmd) {
     out.push({
       ad_id: r.ad_id,
       merchant_id: r.merchant_id,
+      merchant_name: getMerchantName(r.merchant_id),
       zipcode: r.zipcode,
       poster_image_url: pickPosterImageUrl(r.merchant_id),
-      poster_slogan: `Merchant ${r.merchant_id} • ${r.ad_id}`
+      poster_slogan: `${getMerchantName(r.merchant_id)} • ${r.ad_id}`
     });
   }
   return out;

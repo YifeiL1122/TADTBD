@@ -17,6 +17,7 @@ import {
   demoDateYmdToInput,
   listDemoAdsForDate
 } from './demo-dataset.js';
+import { getMerchantName } from './demo-merchants.js';
 
 function $(id) { return document.getElementById(id); }
 
@@ -117,9 +118,9 @@ async function populateAdSelect() {
     }
     if (!ads.length) {
       const fallbackAds = [
-        { ad_id: 'DEMO-AD-001', merchant_id: 'M001', zipcode: '98101', poster_image_url: '', poster_slogan: 'Demo Merchant 1' },
-        { ad_id: 'DEMO-AD-002', merchant_id: 'M007', zipcode: '10001', poster_image_url: '', poster_slogan: 'Demo Merchant 7' },
-        { ad_id: 'DEMO-AD-003', merchant_id: 'M031', zipcode: '60601', poster_image_url: '', poster_slogan: 'Demo Merchant 31' }
+        { ad_id: 'DEMO-AD-001', merchant_id: 'M001', merchant_name: getMerchantName('M001'), zipcode: '98101', poster_image_url: '', poster_slogan: `${getMerchantName('M001')} Tuesday Offer` },
+        { ad_id: 'DEMO-AD-002', merchant_id: 'M007', merchant_name: getMerchantName('M007'), zipcode: '10001', poster_image_url: '', poster_slogan: `${getMerchantName('M007')} Tuesday Offer` },
+        { ad_id: 'DEMO-AD-003', merchant_id: 'M031', merchant_name: getMerchantName('M031'), zipcode: '60601', poster_image_url: '', poster_slogan: `${getMerchantName('M031')} Tuesday Offer` }
       ];
       ads = fallbackAds;
     }
@@ -134,8 +135,10 @@ async function populateAdSelect() {
   for (const a of top) {
     const opt = document.createElement('option');
     opt.value = a.ad_id;
-    opt.textContent = `${a.ad_id} • ${a.merchant_id} • ${a.zipcode}`;
+    const merchantName = a.merchant_name || getMerchantName(a.merchant_id);
+    opt.textContent = `${a.ad_id} • ${merchantName} • ${a.zipcode}`;
     opt.dataset.merchantId = a.merchant_id;
+    opt.dataset.merchantName = merchantName;
     opt.dataset.posterImageUrl = a.poster_image_url || '';
     opt.dataset.posterSlogan = a.poster_slogan || '';
     sel.appendChild(opt);
@@ -209,6 +212,7 @@ async function saveTuesdayCampaign() {
   const sel = $('tuesdayAdSelect');
   const opt = sel?.selectedOptions?.[0];
   const merchantId = opt?.dataset?.merchantId || '';
+  const merchantName = opt?.dataset?.merchantName || getMerchantName(merchantId);
   const posterImageUrl = opt?.dataset?.posterImageUrl || '';
   const posterSlogan = opt?.dataset?.posterSlogan || '';
 
@@ -219,6 +223,7 @@ async function saveTuesdayCampaign() {
       dateYmd: ymd,
       ad_id: adId,
       merchant_id: merchantId,
+      merchant_name: merchantName,
       poster_image_url: posterImageUrl,
       poster_slogan: posterSlogan,
       coupon_code: couponCode,
@@ -238,6 +243,7 @@ async function saveTuesdayCampaign() {
     dateYmd: ymd,
     ad_id: adId,
     merchant_id: merchantId,
+    merchant_name: merchantName,
     poster_image_url: posterImageUrl,
     poster_slogan: posterSlogan,
     coupon_code: couponCode,
@@ -259,7 +265,7 @@ async function demoSendOrUse(eventType) {
   const latest = campaigns[0];
 
   // Fake recipients (merchant ids)
-  const recipients = ['M001', 'M007', 'M010', 'M031', 'M045'];
+  const recipients = ['M001', 'M007', 'M010', 'M031', 'M045'].map((id) => getMerchantName(id));
   const delta = eventType === 'sent' ? 50 : 12;
 
   const oldSent = Number(latest.sent_count || 0);
@@ -321,12 +327,13 @@ async function ensureDemoSeed() {
   } catch (_) {
     ads = [];
   }
-  const pick = ads[0] || { ad_id: 'DEMO-AD-001', merchant_id: 'M001', poster_image_url: '', poster_slogan: 'Demo Tuesday Ad' };
+  const pick = ads[0] || { ad_id: 'DEMO-AD-001', merchant_id: 'M001', merchant_name: getMerchantName('M001'), poster_image_url: '', poster_slogan: `${getMerchantName('M001')} Tuesday Ad` };
   state.campaigns.push({
     id: `demo_${Date.now()}`,
     dateYmd: ymd,
     ad_id: pick.ad_id,
     merchant_id: pick.merchant_id,
+    merchant_name: pick.merchant_name || getMerchantName(pick.merchant_id),
     poster_image_url: pick.poster_image_url || '',
     poster_slogan: pick.poster_slogan || '',
     coupon_code: 'TUE10',
@@ -337,8 +344,8 @@ async function ensureDemoSeed() {
     updatedAt: new Date().toISOString()
   });
   state.logs = [
-    { campaign_id: state.campaigns[0].id, event: 'sent', recipient: 'M001', coupon_code: 'TUE10', ts: new Date().toISOString() },
-    { campaign_id: state.campaigns[0].id, event: 'used', recipient: 'M007', coupon_code: 'TUE10', ts: new Date().toISOString() }
+    { campaign_id: state.campaigns[0].id, event: 'sent', recipient: getMerchantName('M001'), coupon_code: 'TUE10', ts: new Date().toISOString() },
+    { campaign_id: state.campaigns[0].id, event: 'used', recipient: getMerchantName('M007'), coupon_code: 'TUE10', ts: new Date().toISOString() }
   ];
   setDemoState(state);
 }

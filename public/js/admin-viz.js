@@ -173,40 +173,55 @@ function drawSparkline(canvasId, data, color) {
 export function renderPerformanceHeatmap(biddings) {
     const container = document.getElementById('performanceHeatmap');
     if (!container) return;
-    
-    // Create 12 time slots
-    const slots = Array.from({ length: 12 }, (_, i) => {
-        const hour = (i * 2) + 6; // Start at 6 AM
-        return {
-            label: `${hour}:00`,
-            count: 0
-        };
-    });
-    
-    // Count campaigns per slot
-    biddings.forEach(bid => {
-        if (bid.timeSlots && Array.isArray(bid.timeSlots)) {
-            bid.timeSlots.forEach(slot => {
-                const hour = parseInt(slot.split(':')[0]);
-                const slotIndex = Math.floor((hour - 6) / 2);
-                if (slotIndex >= 0 && slotIndex < 12) {
-                    slots[slotIndex].count++;
-                }
-            });
+
+    const slotLabels = ['06', '08', '10', '12', '14', '16', '18', '20'];
+    const statusRows = ['active', 'pending', 'completed'];
+    const matrix = statusRows.map(() => slotLabels.map(() => 0));
+
+    biddings.forEach((bid) => {
+        const row = statusRows.indexOf(String(bid.status || 'pending'));
+        if (row < 0) return;
+        const slots = Array.isArray(bid.timeSlots) ? bid.timeSlots : [];
+        if (!slots.length) {
+            matrix[row][2] += 1;
+            return;
         }
+        slots.forEach((slot) => {
+            const hour = Number(String(slot).split(':')[0]);
+            const col = Math.floor((hour - 6) / 2);
+            if (col >= 0 && col < slotLabels.length) {
+                matrix[row][col] += 1;
+            }
+        });
     });
-    
-    const maxCount = Math.max(...slots.map(s => s.count), 1);
-    
-    container.innerHTML = slots.map(slot => {
-        const intensity = Math.max(1, Math.ceil((slot.count / maxCount) * 5));
+
+    const allVals = matrix.flat();
+    const maxVal = Math.max(1, ...allVals);
+
+    const xAxis = slotLabels.map((l) => `<div class="heatmap-axis-item">${l}:00</div>`).join('');
+    const rows = statusRows.map((status, rIdx) => {
+        const cells = slotLabels.map((_, cIdx) => {
+            const val = matrix[rIdx][cIdx];
+            const intensity = Math.max(1, Math.ceil((val / maxVal) * 5));
+            return `<div class="heatmap-cell intensity-${intensity}" title="${status} @ ${slotLabels[cIdx]}:00 = ${val}">
+                <span>${val}</span>
+            </div>`;
+        }).join('');
         return `
-            <div class="heatmap-cell intensity-${intensity}" title="${slot.label}: ${slot.count} campaigns">
-                <div style="font-size: 0.7em;">${slot.label.split(':')[0]}</div>
-                <div style="font-size: 0.65em; color: rgba(255,255,255,0.6);">${slot.count}</div>
+            <div class="heatmap-row">
+                <div class="heatmap-row-label">${status.toUpperCase()}</div>
+                <div class="heatmap-row-cells">${cells}</div>
             </div>
         `;
     }).join('');
+
+    container.innerHTML = `
+        <div class="heatmap-axis">
+            <div class="heatmap-axis-corner">Y/X</div>
+            <div class="heatmap-axis-x">${xAxis}</div>
+        </div>
+        <div class="heatmap-body">${rows}</div>
+    `;
 }
 
 // Render campaign timeline
@@ -226,29 +241,57 @@ export function renderCampaignTimeline(biddings) {
     // Calculate timeline range
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const formatShortDate = (dateObj) => {
+        const d = new Date(dateObj);
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${mm}/${dd}`;
+    };
     
-    container.innerHTML = activeCampaigns.map(campaign => {
+    const axisLabels = Array.from({ length: 8 }, (_, idx) => {
+        const day = new Date(today.getTime() + idx * oneDayMs);
+        return `<div class="timeline-axis-tick">${formatShortDate(day)}</div>`;
+    })
+        .join('');
+
+    const rows = activeCampaigns.map(campaign => {
         const start = new Date(campaign.startDate);
         const end = new Date(campaign.endDate);
         if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
         
         // Calculate position and width
         const totalDays = 7;
-        const startOffset = Math.max(0, (start - today) / (24 * 60 * 60 * 1000));
-        const duration = Math.max(1, (end - start) / (24 * 60 * 60 * 1000));
+        const startOffset = Math.max(0, (start - today) / oneDayMs);
+        const duration = Math.max(1, (end - start) / oneDayMs);
+        const startDay = Math.max(0, Math.min(7, Math.floor(startOffset)));
+        const endDay = Math.max(startDay + 1, Math.min(7, Math.ceil(startOffset + duration)));
+        const rangeStartDate = new Date(today.getTime() + startDay * oneDayMs);
+        const rangeEndDate = new Date(today.getTime() + endDay * oneDayMs);
+        const segmentLabel = `${formatShortDate(rangeStartDate)}-${formatShortDate(rangeEndDate)}`;
         
         const left = Math.min(100, Math.max(0, (startOffset / totalDays) * 100));
         const width = Math.min(100 - left, Math.max(6, (duration / totalDays) * 100));
         
         return `
-            <div class="timeline-bar">
-                <div class="timeline-segment" style="left: ${left}%; width: ${width}%;" title="${campaign.userEmail}: ${campaign.startDate} - ${campaign.endDate}">
-                    ${campaign.userEmail?.split('@')[0] || 'Campaign'}
+            <div class="timeline-row">
+                <div class="timeline-row-label">${campaign.userEmail?.split('@')[0] || 'Campaign'}</div>
+                <div class="timeline-bar">
+                    <div class="timeline-segment" style="left: ${left}%; width: ${width}%;" title="${campaign.userEmail}: ${campaign.startDate} - ${campaign.endDate}">
+                        ${segmentLabel}
+                    </div>
                 </div>
             </div>
         `;
     }).join('');
+
+    container.innerHTML = `
+        <div class="timeline-axis">
+            <div class="timeline-axis-left">Campaign</div>
+            <div class="timeline-axis-right">${axisLabels}</div>
+        </div>
+        ${rows}
+    `;
 }
 
 // Render campaign funnel

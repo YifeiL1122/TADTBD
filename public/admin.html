@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - T-Mobile Ad System</title>
     <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/admin-enhanced.css">
+    <link rel="stylesheet" href="/css/admin-enhanced.css?v=dualrow2">
     <style>
         .admin-container {
             max-width: 1600px;
@@ -312,11 +312,27 @@
         <div class="page-header">
             <div class="page-header-content">
                 <h1 style="display: flex; align-items: center; gap: 12px;">
-                    Dashboard
+                    Live Operations
                     <span id="demoDataBadge" class="status-badge status-active" style="display:none; font-size: 0.45em;">DEMO</span>
                 </h1>
             </div>
             <div style="display:flex; align-items:center; gap: 12px; flex-wrap: wrap;">
+                <div style="display:flex; align-items:center; gap: 8px; color: var(--tmobile-light-gray); flex-wrap: wrap;">
+                    <span>Region</span>
+                    <select id="regionQuickFilter" style="padding: 8px 10px; border-radius: 8px; background: var(--tmobile-black); border: 1px solid var(--tmobile-gray); color: var(--tmobile-white); min-width: 120px;">
+                        <option value="">Region</option>
+                        <option value="all">All</option>
+                        <option value="west">West</option>
+                        <option value="central">Central</option>
+                        <option value="east">East</option>
+                    </select>
+                    <select id="stateQuickFilter" style="padding: 8px 10px; border-radius: 8px; background: var(--tmobile-black); border: 1px solid var(--tmobile-gray); color: var(--tmobile-white); min-width: 130px;">
+                        <option value="">State</option>
+                    </select>
+                    <select id="areaQuickFilter" style="padding: 8px 10px; border-radius: 8px; background: var(--tmobile-black); border: 1px solid var(--tmobile-gray); color: var(--tmobile-white); min-width: 140px;">
+                        <option value="">City/Area</option>
+                    </select>
+                </div>
                 <label style="display:flex; align-items:center; gap: 10px; color: var(--tmobile-light-gray); user-select:none; cursor: pointer;">
                     <input type="checkbox" id="adminDemoMode" style="width:18px; height:18px;">
                     Demo Mode
@@ -324,104 +340,105 @@
             </div>
         </div>
 
-        <!-- Mega KPI Cards -->
-        <div class="mega-kpi-grid">
-            <div class="mega-kpi-card">
-                <div class="mega-kpi-icon">REV</div>
-                <div class="mega-kpi-content">
-                    <div class="mega-kpi-value" id="totalRevenue">$0</div>
-                    <div class="mega-kpi-label">Total Revenue</div>
-                    <div class="mega-kpi-trend" id="trendRevenue">—</div>
+        <div id="regionGate" class="region-gate">
+            <div class="region-gate-card">
+                <h2>Select Region First</h2>
+                <p>Choose a region to enter the dashboard and view live metrics.</p>
+                <div class="region-gate-controls">
+                    <select id="regionGateSelect">
+                        <option value="">Choose region</option>
+                        <option value="all">All Regions</option>
+                        <option value="west">West</option>
+                        <option value="central">Central</option>
+                        <option value="east">East</option>
+                    </select>
+                    <select id="stateGateSelect">
+                        <option value="">Choose state</option>
+                    </select>
+                    <select id="areaGateSelect">
+                        <option value="">Choose city/area</option>
+                    </select>
+                    <button class="btn-secondary" id="btnEnterRegion" style="background: var(--tmobile-magenta); color: #fff;">Enter Dashboard</button>
                 </div>
-                <canvas id="sparklineRevenue" width="120" height="50"></canvas>
-            </div>
-            
-            <div class="mega-kpi-card">
-                <div class="mega-kpi-icon">CMP</div>
-                <div class="mega-kpi-content">
-                    <div class="mega-kpi-value" id="totalBiddings">0</div>
-                    <div class="mega-kpi-label">Campaigns</div>
-                    <div class="mega-kpi-trend" id="trendCampaigns">—</div>
-                </div>
-                <canvas id="sparklineCampaigns" width="120" height="50"></canvas>
-            </div>
-
-            <div class="mega-kpi-card">
-                <div class="mega-kpi-icon">ACT</div>
-                <div class="mega-kpi-content">
-                    <div class="mega-kpi-value" id="activeBiddings">0</div>
-                    <div class="mega-kpi-label">Active Now</div>
-                    <div class="mega-kpi-trend" id="trendActive">—</div>
-                </div>
-                <canvas id="sparklineActive" width="120" height="50"></canvas>
-            </div>
-
-            <div class="mega-kpi-card">
-                <div class="mega-kpi-icon">PND</div>
-                <div class="mega-kpi-content">
-                    <div class="mega-kpi-value" id="pendingBiddings">0</div>
-                    <div class="mega-kpi-label">Pending</div>
-                    <div class="mega-kpi-trend" id="trendPending">—</div>
-                </div>
-                <canvas id="sparklinePending" width="120" height="50"></canvas>
-            </div>
-
-            <div class="mega-kpi-card">
-                <div class="mega-kpi-icon">IMP</div>
-                <div class="mega-kpi-content">
-                    <div class="mega-kpi-value" id="totalImpressions">0</div>
-                    <div class="mega-kpi-label">Impressions</div>
-                    <div class="mega-kpi-trend" id="trendImpressions">—</div>
-                </div>
-                <canvas id="sparklineImpressions" width="120" height="50"></canvas>
             </div>
         </div>
 
-        <!-- Performance Heatmap -->
-        <div class="heatmap-container">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <div>
-                    <div style="font-weight: 700; font-size: 1.2em;">Hourly Performance Heatmap</div>
-                    <div style="color: #aaaaaa; font-size: 0.9em;">Campaign activity by time slot</div>
-                </div>
-            </div>
-            <div class="heatmap-grid" id="performanceHeatmap"></div>
+        <div class="section-switch">
+            <button class="section-tab active" onclick="switchSection('dashboard', this)">Live Operations</button>
+            <button class="section-tab" onclick="switchSection('internal-content', this)">Internal Content Center</button>
         </div>
 
-        <!-- Campaign Timeline -->
-        <div class="timeline-container">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <div>
-                    <div style="font-weight: 700; font-size: 1.2em;">Active Campaign Timeline</div>
-                    <div style="color: #aaaaaa; font-size: 0.9em;">Visual schedule of running campaigns</div>
+        <div id="dashboard-section" class="section-content active">
+            <div class="mega-kpi-grid realtime-grid">
+                <div class="mega-kpi-card">
+                    <div class="mega-kpi-icon">DEV</div>
+                    <div class="mega-kpi-content">
+                        <div class="mega-kpi-value" id="rtDeviceCount">0</div>
+                        <div class="mega-kpi-label">Current Devices in Region</div>
+                    </div>
+                </div>
+                <div class="mega-kpi-card">
+                    <div class="mega-kpi-icon">IMP</div>
+                    <div class="mega-kpi-content">
+                        <div class="mega-kpi-value" id="rtImpressions">0</div>
+                        <div class="mega-kpi-label">Current Impressions (Live Est.)</div>
+                    </div>
+                </div>
+                <div class="mega-kpi-card">
+                    <div class="mega-kpi-icon">ADS</div>
+                    <div class="mega-kpi-content">
+                        <div class="mega-kpi-value" id="rtLiveAds">0</div>
+                        <div class="mega-kpi-label">Ads Currently Displaying</div>
+                        <div id="rtLiveAdsHint" class="kpi-hint">—</div>
+                    </div>
                 </div>
             </div>
-            <div id="campaignTimeline"></div>
-        </div>
 
-        <!-- Conversion Funnel -->
-        <div class="funnel-container">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <div>
-                    <div style="font-weight: 700; font-size: 1.2em;">Campaign Funnel</div>
-                    <div style="color: #aaaaaa; font-size: 0.9em;">From submission to deployment</div>
+            <!-- Performance Heatmap -->
+            <div class="heatmap-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 1.2em;">Hourly Performance Heatmap</div>
+                        <div style="color: #aaaaaa; font-size: 0.9em;">Campaign activity by time slot</div>
+                    </div>
+                </div>
+                <div class="heatmap-grid" id="performanceHeatmap"></div>
+            </div>
+
+            <div class="analytics-dual-row">
+                <!-- Campaign Timeline -->
+                <div class="timeline-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 1.2em;">Active Campaign Timeline</div>
+                            <div style="color: #aaaaaa; font-size: 0.9em;">Visual schedule of running campaigns</div>
+                        </div>
+                    </div>
+                    <div id="campaignTimeline"></div>
+                </div>
+
+                <!-- Conversion Funnel -->
+                <div class="funnel-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 1.2em;">Campaign Funnel</div>
+                            <div style="color: #aaaaaa; font-size: 0.9em;">From submission to deployment</div>
+                        </div>
+                    </div>
+                    <div id="campaignFunnel"></div>
                 </div>
             </div>
-            <div id="campaignFunnel"></div>
-        </div>
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('all-biddings', this)">Campaigns</button>
-            <button class="tab" onclick="switchTab('deployments', this)">Devices</button>
-            <button class="tab" onclick="switchTab('schedule', this)">Schedule</button>
-            <button class="tab" onclick="switchTab('ranking', this)">Ranking</button>
-            <button class="tab" onclick="switchTab('analytics', this)">Analytics</button>
-            <button class="tab" onclick="switchTab('tmobile-tuesday', this)">T-Mobile Tuesday</button>
+                <button class="tab dash-tab active" onclick="switchTab('all-biddings', this)">Campaigns</button>
+                <button class="tab dash-tab" onclick="switchTab('deployments', this)">Devices</button>
+                <button class="tab dash-tab" onclick="switchTab('ranking', this)">Ranking</button>
+                <button class="tab dash-tab" onclick="switchTab('analytics', this)">Analytics</button>
         </div>
 
         <!-- All Biddings Tab -->
-        <div id="all-biddings" class="tab-content active">
+            <div id="all-biddings" class="tab-content dash-tab-content active">
             <div class="filter-bar">
                 <select id="statusFilter" onchange="filterBiddings()">
                     <option value="">All Statuses</option>
@@ -429,6 +446,7 @@
                     <option value="active">Active</option>
                     <option value="completed">Completed</option>
                     <option value="rejected">Rejected</option>
+                    <option value="withdrawn">Withdrawn</option>
                 </select>
                 <input type="text" id="searchUser" placeholder="Search by user email..." oninput="filterBiddings()">
                 <input type="date" id="dateFilter" onchange="filterBiddings()">
@@ -455,8 +473,8 @@
             </div>
         </div>
 
-        <!-- Device Deployments Tab -->
-        <div id="deployments" class="tab-content">
+            <!-- Device Deployments Tab -->
+            <div id="deployments" class="tab-content dash-tab-content">
             <h2>Device Deployments</h2>
             <p style="color: var(--tmobile-light-gray); margin-bottom: 20px;">Monitor and manage ad deployments to connected devices</p>
 
@@ -481,16 +499,8 @@
             </div>
         </div>
 
-        <!-- Schedule Tab -->
-        <div id="schedule" class="tab-content">
-            <h2>Upcoming Ad Deployments</h2>
-            <div class="schedule-timeline" id="scheduleTimeline">
-                <p style="color: var(--tmobile-light-gray); padding: 40px; text-align: center;">Loading schedule...</p>
-            </div>
-        </div>
-
-        <!-- Ranking Tab -->
-        <div id="ranking" class="tab-content">
+            <!-- Ranking Tab -->
+            <div id="ranking" class="tab-content dash-tab-content">
             <h2>Ranking Dashboard (GSP Simulation)</h2>
             <p style="color: var(--tmobile-light-gray); margin-bottom: 20px;">
                 This uses a GSP-like auction per (zipcode, date, time_slot): top 3 win, and pay the next bid (reserve for last).
@@ -576,6 +586,21 @@
 
             <div style="margin-top: 25px;">
                 <h3 style="margin-bottom: 10px;">Top Merchants (by spend)</h3>
+                <div class="ranking-merchant-filters">
+                    <select id="rankingMerchantTierFilter">
+                        <option value="all">Tier: All</option>
+                        <option value="top">Tier: Top Performers</option>
+                        <option value="growth">Tier: Growth Merchants</option>
+                        <option value="emerging">Tier: Emerging Merchants</option>
+                    </select>
+                    <select id="rankingMerchantRegionFilter">
+                        <option value="all">Region: All</option>
+                        <option value="east">Region: East</option>
+                        <option value="central">Region: Central</option>
+                        <option value="west">Region: West</option>
+                    </select>
+                    <button id="rankingMerchantFilterReset" class="btn-secondary">Reset</button>
+                </div>
                 <div id="rankingMerchantCards" class="viz-card-grid">
                     <div class="viz-empty">No ranking results yet</div>
                 </div>
@@ -583,14 +608,35 @@
 
             <div style="margin-top: 25px;">
                 <h3 style="margin-bottom: 10px;">Auction Winners (per slot)</h3>
+                <div class="ranking-auction-filters">
+                    <select id="rankingAuctionRegionFilter">
+                        <option value="all">Region: All</option>
+                        <option value="east">Region: East</option>
+                        <option value="central">Region: Central</option>
+                        <option value="west">Region: West</option>
+                    </select>
+                    <select id="rankingAuctionSlotFilter">
+                        <option value="all">Slot: All</option>
+                    </select>
+                    <select id="rankingAuctionPositionFilter">
+                        <option value="all">Position: All</option>
+                    </select>
+                    <input id="rankingAuctionKeywordFilter" type="text" placeholder="Search merchant/ad..." />
+                    <select id="rankingAuctionLimitFilter">
+                        <option value="12">Show 12</option>
+                        <option value="24" selected>Show 24</option>
+                        <option value="48">Show 48</option>
+                    </select>
+                    <button id="rankingAuctionFilterReset" class="btn-secondary">Reset</button>
+                </div>
                 <div id="rankingAuctionCards" class="viz-card-grid">
                     <div class="viz-empty">No ranking results yet</div>
                 </div>
             </div>
-        </div>
+            </div>
 
         <!-- Analytics Tab -->
-        <div id="analytics" class="tab-content">
+            <div id="analytics" class="tab-content dash-tab-content">
             <h2>Campaign Analytics</h2>
             <p style="color: var(--tmobile-light-gray); margin-bottom: 20px;">
                 Visualize campaign performance. (If there’s no data yet, demo charts will render with fake data.)
@@ -615,55 +661,142 @@
                 <div id="chartTopZipcodesHint" style="margin-top:8px; color: var(--tmobile-gray); font-size: 0.85em;"></div>
             </div>
         </div>
+            </div>
+        </div>
 
-        <!-- T-Mobile Tuesday Tab -->
-        <div id="tmobile-tuesday" class="tab-content">
-            <h2>T-Mobile Tuesday Manager</h2>
-            <p style="color: var(--tmobile-light-gray); margin-bottom: 20px;">
-                Pick the Tuesday ad and monitor coupon send/use status.
+        <div id="internal-content-section" class="section-content">
+            <h2 style="margin-bottom: 6px;">Internal Content Center</h2>
+            <p style="color: var(--tmobile-light-gray); margin-bottom: 18px;">
+                Manage Tuesday campaign content and internal ads with approval workflow and auto launch queue.
             </p>
-            <div class="stat-card" style="text-align:left;">
-                <div style="display:grid; grid-template-columns: 1.2fr 1.8fr; gap: 20px; align-items: start;">
-                    <div>
-                        <div style="color: var(--tmobile-light-gray); font-size: 0.95em; margin-bottom: 10px;">
-                            Select ad source and configure coupon campaign.
+
+            <div class="tabs">
+                <button class="tab internal-tab active" onclick="switchInternalTab('tmobile-tuesday', this)">T-Mobile Tuesday</button>
+                <button class="tab internal-tab" onclick="switchInternalTab('internal-audit', this)">Internal Ads & Audit Queue</button>
+            </div>
+
+            <!-- T-Mobile Tuesday Tab -->
+            <div id="tmobile-tuesday" class="tab-content internal-tab-content active">
+                <h2>T-Mobile Tuesday Manager</h2>
+                <p style="color: var(--tmobile-light-gray); margin-bottom: 20px;">
+                    Pick the Tuesday ad and monitor coupon send/use status.
+                </p>
+                <div class="stat-card" style="text-align:left;">
+                    <div style="display:grid; grid-template-columns: 1.2fr 1.8fr; gap: 20px; align-items: start;">
+                        <div>
+                            <div style="color: var(--tmobile-light-gray); font-size: 0.95em; margin-bottom: 10px;">
+                                Select ad source and configure coupon campaign.
+                            </div>
+                            <div class="filter-bar" style="gap: 10px;">
+                                <input type="date" id="tuesdayDate" />
+                                <select id="tuesdayDataSource">
+                                    <option value="csv_demo">Data: CSV demo</option>
+                                    <option value="ranking_latest">Data: Latest Ranking Winners</option>
+                                </select>
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <label style="display:block; color: var(--tmobile-light-gray); margin-bottom: 6px;">Tuesday Ad</label>
+                                <select id="tuesdayAdSelect" style="width:100%; padding: 12px; border-radius: 10px; background: var(--tmobile-black); border: 2px solid var(--tmobile-gray); color: var(--tmobile-white);"></select>
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <label style="display:block; color: var(--tmobile-light-gray); margin-bottom: 6px;">Coupon Code</label>
+                                <input id="tuesdayCouponCode" placeholder="e.g. TUE10" style="width:100%; padding: 12px; border-radius: 10px; background: var(--tmobile-black); border: 2px solid var(--tmobile-gray); color: var(--tmobile-white);" />
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <label style="display:block; color: var(--tmobile-light-gray); margin-bottom: 6px;">Coupon Description</label>
+                                <input id="tuesdayCouponDesc" placeholder="e.g. 10% off today only" style="width:100%; padding: 12px; border-radius: 10px; background: var(--tmobile-black); border: 2px solid var(--tmobile-gray); color: var(--tmobile-white);" />
+                            </div>
+                            <div style="display:flex; gap: 10px; flex-wrap: wrap; margin-top: 14px;">
+                                <button class="btn-secondary" id="btnSaveTuesdayCampaign" style="background: var(--tmobile-magenta); color: white;">Save Tuesday Campaign</button>
+                                <button class="btn-secondary" id="btnDemoSendCoupons">Send Coupons (demo)</button>
+                                <button class="btn-secondary" id="btnDemoMarkUsed">Mark Used (demo)</button>
+                            </div>
+                            <div id="tuesdayManagerHint" style="margin-top: 10px; color: var(--tmobile-gray); font-size: 0.85em;"></div>
                         </div>
-                        <div class="filter-bar" style="gap: 10px;">
-                            <input type="date" id="tuesdayDate" />
-                            <select id="tuesdayDataSource">
-                                <option value="csv_demo">Data: CSV demo</option>
-                                <option value="ranking_latest">Data: Latest Ranking Winners</option>
+                        <div>
+                            <div style="font-weight: 700; margin-bottom: 10px;">All Coupons: Send & Use Status</div>
+                            <div id="couponCampaignCards" class="viz-card-grid">
+                                <div class="viz-empty">Loading...</div>
+                            </div>
+                            <div style="margin-top: 12px;">
+                                <div style="font-weight: 700; margin-bottom: 6px;">Recent Coupon Logs</div>
+                                <div id="couponLogs" style="max-height: 180px; overflow:auto; padding: 12px; border: 2px solid var(--tmobile-gray); border-radius: 12px; background: rgba(0,0,0,0.35); color: var(--tmobile-light-gray);">
+                                    No logs yet.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="internal-audit" class="tab-content internal-tab-content">
+                <h2>Internal Ads Audit Workflow</h2>
+                <p style="color: var(--tmobile-light-gray); margin-bottom: 20px;">
+                    Submit internal ads, review with approve/reject, and manage auto queue (auto launch + manual remove + launch now).
+                </p>
+                <div class="filter-bar" style="margin-bottom: 14px;">
+                    <label style="display:flex; align-items:center; gap:8px; color: var(--tmobile-light-gray);">
+                        <input type="checkbox" id="internalAutoMode" checked style="width:18px; height:18px;">
+                        Auto Launch Queue
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; color: var(--tmobile-light-gray);">
+                        Interval (sec)
+                        <input id="internalAutoIntervalSec" type="number" min="5" step="5" value="20" style="width:100px;">
+                    </label>
+                    <button class="btn-secondary" onclick="applyInternalAutoSettings()">Apply Auto Settings</button>
+                </div>
+                <div class="internal-kpi-row">
+                    <div class="internal-kpi-card">
+                        <div class="internal-kpi-label">Pending</div>
+                        <div class="internal-kpi-value" id="internalPendingCount">0</div>
+                    </div>
+                    <div class="internal-kpi-card">
+                        <div class="internal-kpi-label">Queued</div>
+                        <div class="internal-kpi-value" id="internalQueuedCount">0</div>
+                    </div>
+                    <div class="internal-kpi-card">
+                        <div class="internal-kpi-label">Now Live</div>
+                        <div class="internal-kpi-value" id="internalLiveCount">0</div>
+                    </div>
+                </div>
+                <div class="internal-grid">
+                    <div class="stat-card" style="text-align:left;">
+                        <div style="font-weight:700; margin-bottom: 12px;">Create Internal Ad</div>
+                        <div class="filter-bar">
+                            <input id="internalAdTitle" placeholder="Internal ad title" />
+                            <select id="internalAdRegion">
+                                <option value="all">All Regions</option>
+                                <option value="west">West</option>
+                                <option value="central">Central</option>
+                                <option value="east">East</option>
                             </select>
                         </div>
-                        <div style="margin-top: 10px;">
-                            <label style="display:block; color: var(--tmobile-light-gray); margin-bottom: 6px;">Tuesday Ad</label>
-                            <select id="tuesdayAdSelect" style="width:100%; padding: 12px; border-radius: 10px; background: var(--tmobile-black); border: 2px solid var(--tmobile-gray); color: var(--tmobile-white);"></select>
+                        <input id="internalAdNote" placeholder="Internal content notes / copy" style="width:100%; padding: 10px 12px; border-radius: 8px; background: var(--tmobile-dark-gray); border: 2px solid var(--tmobile-gray); color: var(--tmobile-white);" />
+                        <div style="display:flex; gap:10px; margin-top: 12px; flex-wrap: wrap;">
+                            <button class="btn-secondary" style="background: var(--tmobile-magenta); color:#fff;" onclick="submitInternalAd()">Submit For Review</button>
+                            <button class="btn-secondary" onclick="playNextInternalAd()">Launch Next Now</button>
                         </div>
-                        <div style="margin-top: 10px;">
-                            <label style="display:block; color: var(--tmobile-light-gray); margin-bottom: 6px;">Coupon Code</label>
-                            <input id="tuesdayCouponCode" placeholder="e.g. TUE10" style="width:100%; padding: 12px; border-radius: 10px; background: var(--tmobile-black); border: 2px solid var(--tmobile-gray); color: var(--tmobile-white);" />
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <label style="display:block; color: var(--tmobile-light-gray); margin-bottom: 6px;">Coupon Description</label>
-                            <input id="tuesdayCouponDesc" placeholder="e.g. 10% off today only" style="width:100%; padding: 12px; border-radius: 10px; background: var(--tmobile-black); border: 2px solid var(--tmobile-gray); color: var(--tmobile-white);" />
-                        </div>
-                        <div style="display:flex; gap: 10px; flex-wrap: wrap; margin-top: 14px;">
-                            <button class="btn-secondary" id="btnSaveTuesdayCampaign" style="background: var(--tmobile-magenta); color: white;">Save Tuesday Campaign</button>
-                            <button class="btn-secondary" id="btnDemoSendCoupons">Send Coupons (demo)</button>
-                            <button class="btn-secondary" id="btnDemoMarkUsed">Mark Used (demo)</button>
-                        </div>
-                        <div id="tuesdayManagerHint" style="margin-top: 10px; color: var(--tmobile-gray); font-size: 0.85em;"></div>
+                        <div id="internalWorkflowHint" style="margin-top: 10px; color: var(--tmobile-gray); font-size: 0.85em;"></div>
                     </div>
-                    <div>
-                        <div style="font-weight: 700; margin-bottom: 10px;">All Coupons: Send & Use Status</div>
-                        <div id="couponCampaignCards" class="viz-card-grid">
-                            <div class="viz-empty">Loading...</div>
+                    <div class="stat-card" style="text-align:left;">
+                        <div style="font-weight:700; margin-bottom: 12px;">Pending Review</div>
+                        <div id="internalPendingList" class="viz-card-grid">
+                            <div class="viz-empty">No pending items</div>
                         </div>
-                        <div style="margin-top: 12px;">
-                            <div style="font-weight: 700; margin-bottom: 6px;">Recent Coupon Logs</div>
-                            <div id="couponLogs" style="max-height: 180px; overflow:auto; padding: 12px; border: 2px solid var(--tmobile-gray); border-radius: 12px; background: rgba(0,0,0,0.35); color: var(--tmobile-light-gray);">
-                                No logs yet.
-                            </div>
+                    </div>
+                </div>
+
+                <div class="internal-grid" style="margin-top: 16px;">
+                    <div class="stat-card" style="text-align:left;">
+                        <div style="font-weight:700; margin-bottom: 12px;">Auto Launch Queue</div>
+                        <div id="internalQueueList" class="viz-card-grid">
+                            <div class="viz-empty">Queue is empty</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="text-align:left;">
+                        <div style="font-weight:700; margin-bottom: 12px;">Now Live</div>
+                        <div id="internalLiveList" class="viz-card-grid">
+                            <div class="viz-empty">Nothing live</div>
                         </div>
                     </div>
                 </div>
@@ -692,10 +825,21 @@
             setTimeout(() => window.switchTab && window.switchTab(tabName), 100);
         };
         window.filterBiddings = window.filterBiddings || function() {};
+        window.switchSection = window.switchSection || function() {};
+        window.switchInternalTab = window.switchInternalTab || function() {};
         window.editBidding = window.editBidding || function() {};
         window.updateStatus = window.updateStatus || function() {};
         window.saveEdit = window.saveEdit || function() {};
         window.closeEditModal = window.closeEditModal || function() {};
+        window.submitInternalAd = window.submitInternalAd || function() {};
+        window.playNextInternalAd = window.playNextInternalAd || function() {};
+        window.approveInternalAd = window.approveInternalAd || function() {};
+        window.rejectInternalAd = window.rejectInternalAd || function() {};
+        window.removeInternalAd = window.removeInternalAd || function() {};
+        window.launchInternalAdNow = window.launchInternalAdNow || function() {};
+        window.applyInternalAutoSettings = window.applyInternalAutoSettings || function() {};
+        window.manualLaunchCampaign = window.manualLaunchCampaign || function() {};
+        window.manualWithdrawCampaign = window.manualWithdrawCampaign || function() {};
     </script>
 
     <!-- Load Auth Script -->

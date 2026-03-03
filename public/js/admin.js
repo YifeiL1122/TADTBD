@@ -1,10 +1,9 @@
 // Admin Dashboard Logic
 import { db } from './firebase-config.js';
 import { loadDemoDataset } from './demo-dataset.js';
+import { getMerchantName, getMerchantEmail } from './demo-merchants.js';
 import {
     formatNumber,
-    updateTrends,
-    renderSparklines,
     renderPerformanceHeatmap,
     renderCampaignTimeline,
     renderCampaignFunnel
@@ -26,9 +25,50 @@ let currentEditId = null;
 let chartRevenue7d = null;
 let chartStatusMix = null;
 let chartTopZipcodes = null;
+let selectedRegion = '';
+let selectedState = '';
+let selectedArea = '';
+let currentSection = 'dashboard';
+let internalAdsState = [];
+let internalAutoMode = true;
+let internalAutoIntervalSec = 20;
+let internalAutoTimer = null;
 
 const DEMO_MODE_KEY = 'adminDemoMode';
+const REGION_KEY = 'adminSelectedRegion';
+const STATE_KEY = 'adminSelectedState';
+const AREA_KEY = 'adminSelectedArea';
+const INTERNAL_ADS_STATE_KEY = 'internalAdsWorkflowV1';
+const INTERNAL_AUTO_SETTINGS_KEY = 'internalAdsAutoSettingsV1';
 let isUsingDemoData = false;
+
+const REGION_TREE = {
+    all: {
+        states: ['all'],
+        areas: { all: ['all'] }
+    },
+    west: {
+        states: ['WA', 'CA'],
+        areas: {
+            WA: ['Seattle', 'Bellevue', 'Tacoma'],
+            CA: ['San Francisco', 'San Jose', 'Los Angeles']
+        }
+    },
+    central: {
+        states: ['TX', 'IL'],
+        areas: {
+            TX: ['Austin', 'Dallas', 'Houston'],
+            IL: ['Chicago', 'Naperville', 'Springfield']
+        }
+    },
+    east: {
+        states: ['NY', 'MA'],
+        areas: {
+            NY: ['NYC', 'Brooklyn', 'Buffalo'],
+            MA: ['Boston', 'Cambridge', 'Worcester']
+        }
+    }
+};
 
 function getDemoMode() {
     // Default ON for dashboard demo branch unless explicitly turned off.
@@ -44,6 +84,88 @@ function setDemoMode(on) {
 function setDemoBadge(show) {
     const badge = document.getElementById('demoDataBadge');
     if (badge) badge.style.display = show ? 'inline-block' : 'none';
+}
+
+function getStoredRegion() {
+    return localStorage.getItem(REGION_KEY) || '';
+}
+
+function setStoredRegion(region) {
+    localStorage.setItem(REGION_KEY, region || '');
+}
+
+function getStoredState() {
+    return localStorage.getItem(STATE_KEY) || '';
+}
+
+function setStoredState(state) {
+    localStorage.setItem(STATE_KEY, state || '');
+}
+
+function getStoredArea() {
+    return localStorage.getItem(AREA_KEY) || '';
+}
+
+function setStoredArea(area) {
+    localStorage.setItem(AREA_KEY, area || '');
+}
+
+function normalizeRegion(region) {
+    const value = String(region || '').toLowerCase();
+    if (['all', 'west', 'central', 'east'].includes(value)) return value;
+    return '';
+}
+
+function regionFromZip(zip) {
+    const s = String(zip || '').replace(/\D/g, '');
+    if (!s) return 'central';
+    const prefix = Number(s.slice(0, 1));
+    if (Number.isNaN(prefix)) return 'central';
+    if (prefix <= 3) return 'east';
+    if (prefix <= 6) return 'central';
+    return 'west';
+}
+
+function zipToGeo(zip) {
+    const region = regionFromZip(zip);
+    const tree = REGION_TREE[region] || REGION_TREE.central;
+    const states = tree.states || ['TX'];
+    const digits = String(zip || '').replace(/\D/g, '') || '0';
+    const seed = Number(digits.slice(-2)) || 0;
+    const state = states[seed % states.length];
+    const areas = (tree.areas && tree.areas[state]) ? tree.areas[state] : ['Metro'];
+    const area = areas[seed % areas.length];
+    return { region, state, area };
+}
+
+function matchesRegion(zipcodes, region, state = '', area = '') {
+    const normalized = normalizeRegion(region);
+    if (!normalized || normalized === 'all') return true;
+    const list = Array.isArray(zipcodes) ? zipcodes : [];
+    if (!list.length) return false;
+    return list.some((zip) => {
+        const geo = zipToGeo(zip);
+        if (geo.region !== normalized) return false;
+        if (state && state !== 'all' && geo.state !== state) return false;
+        if (area && area !== 'all' && geo.area !== area) return false;
+        return true;
+    });
+}
+
+function getBidZipcodes(bid) {
+    if (Array.isArray(bid?.zipcodes) && bid.zipcodes.length) return bid.zipcodes.map(String);
+    if (bid?.zipcode) return [String(bid.zipcode)];
+    return [];
+}
+
+function getFilteredBiddings() {
+    if (!selectedRegion || selectedRegion === 'all') return allBiddings.slice();
+    return allBiddings.filter((b) => matchesRegion(getBidZipcodes(b), selectedRegion, selectedState, selectedArea));
+}
+
+function getFilteredDeployments() {
+    if (!selectedRegion || selectedRegion === 'all') return allDeployments.slice();
+    return allDeployments.filter((d) => matchesRegion((d.zipcodes || []).map(String), selectedRegion, selectedState, selectedArea));
 }
 
 function showDemoLoading(show) {
@@ -175,7 +297,8 @@ async function getDemoBiddingsFromCsv(maxRows = 200) {
         out.push({
             id: `demo_${r.ad_id}`,
             userId: String(r.merchant_id),
-            userEmail: `${String(r.merchant_id).toLowerCase()}@demo.merchant`,
+            userEmail: getMerchantName(r.merchant_id),
+            userContact: getMerchantEmail(r.merchant_id),
             zipcodes: [String(r.zipcode)],
             startDate,
             endDate,
@@ -258,9 +381,317 @@ function checkAdminSession() {
     }
 }
 
+function setInternalWorkflowHint(text) {
+    const el = document.getElementById('internalWorkflowHint');
+    if (el) el.textContent = text || '';
+}
+
+function refreshDashboardViews() {
+    updateStatistics();
+    displayBiddings();
+    displayDeployments();
+    renderAnalyticsCharts();
+}
+
+function fillSelectOptions(selectEl, values, placeholder) {
+    if (!selectEl) return;
+    selectEl.innerHTML = '';
+    const first = document.createElement('option');
+    first.value = '';
+    first.textContent = placeholder;
+    selectEl.appendChild(first);
+    values.forEach((v) => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v === 'all' ? 'All' : v;
+        selectEl.appendChild(opt);
+    });
+}
+
+function syncRegionSelectOptions(region) {
+    const normalized = normalizeRegion(region);
+    const tree = REGION_TREE[normalized || 'all'] || REGION_TREE.all;
+    const states = tree.states || [];
+    const areasByState = tree.areas || {};
+    const areaList = selectedState && areasByState[selectedState]
+        ? areasByState[selectedState]
+        : (states[0] ? (areasByState[states[0]] || []) : []);
+
+    fillSelectOptions(document.getElementById('stateQuickFilter'), states, 'State');
+    fillSelectOptions(document.getElementById('stateGateSelect'), states, 'Choose state');
+    fillSelectOptions(document.getElementById('areaQuickFilter'), areaList, 'City/Area');
+    fillSelectOptions(document.getElementById('areaGateSelect'), areaList, 'Choose city/area');
+}
+
+function syncAreaOptionsForState(region, state) {
+    const normalized = normalizeRegion(region);
+    const tree = REGION_TREE[normalized || 'all'] || REGION_TREE.all;
+    const areas = (tree.areas && tree.areas[state]) ? tree.areas[state] : ['all'];
+    fillSelectOptions(document.getElementById('areaQuickFilter'), areas, 'City/Area');
+    fillSelectOptions(document.getElementById('areaGateSelect'), areas, 'Choose city/area');
+}
+
+function applyRegionSelection(region, state = '', area = '', fromGate = false) {
+    const normalized = normalizeRegion(region);
+    selectedRegion = normalized;
+    selectedState = state || '';
+    selectedArea = area || '';
+    setStoredRegion(normalized);
+    setStoredState(selectedState);
+    setStoredArea(selectedArea);
+
+    const quickRegion = document.getElementById('regionQuickFilter');
+    const gateRegion = document.getElementById('regionGateSelect');
+    const quickState = document.getElementById('stateQuickFilter');
+    const gateState = document.getElementById('stateGateSelect');
+    const quickArea = document.getElementById('areaQuickFilter');
+    const gateArea = document.getElementById('areaGateSelect');
+    if (quickRegion) quickRegion.value = normalized;
+    if (gateRegion) gateRegion.value = normalized;
+
+    syncRegionSelectOptions(normalized);
+    if (selectedState) {
+        if (quickState) quickState.value = selectedState;
+        if (gateState) gateState.value = selectedState;
+        syncAreaOptionsForState(normalized, selectedState);
+    }
+    if (selectedArea) {
+        if (quickArea) quickArea.value = selectedArea;
+        if (gateArea) gateArea.value = selectedArea;
+    }
+
+    const gate = document.getElementById('regionGate');
+    if (gate) gate.style.display = normalized ? 'none' : 'block';
+
+    if (normalized) {
+        refreshDashboardViews();
+        if (fromGate) {
+            switchSection('dashboard');
+            switchTab('all-biddings');
+        }
+    }
+}
+
+function initRegionSelection() {
+    const quickRegion = document.getElementById('regionQuickFilter');
+    const gateRegion = document.getElementById('regionGateSelect');
+    const quickState = document.getElementById('stateQuickFilter');
+    const gateState = document.getElementById('stateGateSelect');
+    const quickArea = document.getElementById('areaQuickFilter');
+    const gateArea = document.getElementById('areaGateSelect');
+    const enterBtn = document.getElementById('btnEnterRegion');
+
+    if (quickRegion) {
+        quickRegion.addEventListener('change', () => {
+            selectedState = '';
+            selectedArea = '';
+            applyRegionSelection(quickRegion.value);
+        });
+    }
+    if (gateRegion) {
+        gateRegion.addEventListener('change', () => {
+            if (quickRegion) quickRegion.value = gateRegion.value;
+            selectedState = '';
+            selectedArea = '';
+            applyRegionSelection(gateRegion.value);
+            const gate = document.getElementById('regionGate');
+            if (gate) gate.style.display = 'block';
+        });
+    }
+    if (quickState) {
+        quickState.addEventListener('change', () => {
+            selectedState = quickState.value;
+            selectedArea = '';
+            syncAreaOptionsForState(selectedRegion, selectedState);
+            applyRegionSelection(selectedRegion, selectedState, '');
+        });
+    }
+    if (gateState) {
+        gateState.addEventListener('change', () => {
+            if (quickState) quickState.value = gateState.value;
+            selectedState = gateState.value;
+            selectedArea = '';
+            syncAreaOptionsForState(selectedRegion, selectedState);
+        });
+    }
+    if (quickArea) {
+        quickArea.addEventListener('change', () => {
+            selectedArea = quickArea.value;
+            applyRegionSelection(selectedRegion, selectedState, selectedArea);
+        });
+    }
+    if (gateArea) {
+        gateArea.addEventListener('change', () => {
+            if (quickArea) quickArea.value = gateArea.value;
+            selectedArea = gateArea.value;
+        });
+    }
+
+    if (enterBtn) {
+        enterBtn.addEventListener('click', () => {
+            const picked = gateRegion?.value || quickRegion?.value || '';
+            if (!normalizeRegion(picked)) {
+                alert('Please choose a region first.');
+                return;
+            }
+            const stateVal = gateState?.value || quickState?.value || '';
+            const areaVal = gateArea?.value || quickArea?.value || '';
+            applyRegionSelection(picked, stateVal, areaVal, true);
+        });
+    }
+
+    const remembered = normalizeRegion(getStoredRegion());
+    const rememberedState = getStoredState();
+    const rememberedArea = getStoredArea();
+    applyRegionSelection(remembered, rememberedState, rememberedArea);
+}
+
+function loadInternalAdsState() {
+    try {
+        const raw = localStorage.getItem(INTERNAL_ADS_STATE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        internalAdsState = Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+        internalAdsState = [];
+    }
+}
+
+function saveInternalAdsState() {
+    localStorage.setItem(INTERNAL_ADS_STATE_KEY, JSON.stringify(internalAdsState));
+}
+
+function ensureInternalDemoSeed() {
+    if (internalAdsState.length > 0) return;
+    if (!getDemoMode()) return;
+    const now = Date.now();
+    internalAdsState = [
+        { id: 'ia_demo_1', title: 'Tuesday Hero Promo', note: 'Main internal spotlight', region: 'west', status: 'pending', priority: now - 10000, createdAt: new Date(now - 3600000).toISOString(), updatedAt: new Date(now - 3600000).toISOString() },
+        { id: 'ia_demo_2', title: 'Store Ops Alert', note: 'Internal ops message', region: 'central', status: 'pending', priority: now - 8000, createdAt: new Date(now - 3000000).toISOString(), updatedAt: new Date(now - 3000000).toISOString() },
+        { id: 'ia_demo_3', title: 'Weekend Bundle Banner', note: 'Queued for next slot', region: 'east', status: 'queued', priority: now - 6000, createdAt: new Date(now - 2400000).toISOString(), updatedAt: new Date(now - 2400000).toISOString() },
+        { id: 'ia_demo_4', title: 'Employee Offer Banner', note: 'Queued high priority', region: 'west', status: 'queued', priority: now - 4000, createdAt: new Date(now - 1800000).toISOString(), updatedAt: new Date(now - 1800000).toISOString() },
+        { id: 'ia_demo_5', title: 'Live Flash Creative', note: 'Currently live', region: 'central', status: 'live', priority: now - 2000, createdAt: new Date(now - 1200000).toISOString(), updatedAt: new Date(now - 600000).toISOString() }
+    ];
+    saveInternalAdsState();
+}
+
+function loadInternalAutoSettings() {
+    try {
+        const raw = localStorage.getItem(INTERNAL_AUTO_SETTINGS_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (parsed && typeof parsed === 'object') {
+            internalAutoMode = parsed.enabled !== false;
+            const sec = Number(parsed.intervalSec || 20);
+            internalAutoIntervalSec = Math.max(5, Math.min(300, Number.isFinite(sec) ? sec : 20));
+        }
+    } catch (_) {
+        internalAutoMode = true;
+        internalAutoIntervalSec = 20;
+    }
+}
+
+function saveInternalAutoSettings() {
+    localStorage.setItem(INTERNAL_AUTO_SETTINGS_KEY, JSON.stringify({
+        enabled: internalAutoMode,
+        intervalSec: internalAutoIntervalSec
+    }));
+}
+
+function bindInternalAutoControls() {
+    const modeEl = document.getElementById('internalAutoMode');
+    const intervalEl = document.getElementById('internalAutoIntervalSec');
+    if (modeEl) modeEl.checked = internalAutoMode;
+    if (intervalEl) intervalEl.value = String(internalAutoIntervalSec);
+}
+
+function startInternalAutoTimer() {
+    if (internalAutoTimer) clearInterval(internalAutoTimer);
+    internalAutoTimer = setInterval(() => {
+        if (!internalAutoMode) return;
+        const queued = internalAdsState
+            .filter((x) => x.status === 'queued')
+            .sort((a, b) => (b.priority || 0) - (a.priority || 0));
+        if (!queued.length) return;
+        window.launchInternalAdNow(queued[0].id);
+    }, internalAutoIntervalSec * 1000);
+}
+
+function statusPill(status) {
+    const safe = String(status || 'pending');
+    return `<span class="status-badge status-${safe}">${safe.toUpperCase()}</span>`;
+}
+
+function renderInternalAdsWorkflow() {
+    const pendingBox = document.getElementById('internalPendingList');
+    const queueBox = document.getElementById('internalQueueList');
+    const liveBox = document.getElementById('internalLiveList');
+    if (!pendingBox || !queueBox || !liveBox) return;
+
+    const pending = internalAdsState.filter((x) => x.status === 'pending');
+    const queued = internalAdsState.filter((x) => x.status === 'queued').sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    const live = internalAdsState.filter((x) => x.status === 'live');
+
+    pendingBox.innerHTML = pending.length ? pending.map((ad) => `
+        <div class="viz-card">
+            <div class="viz-card-title">${ad.title}</div>
+            <div class="viz-card-sub">${ad.region.toUpperCase()} • ${new Date(ad.createdAt).toLocaleString()}</div>
+            <div class="viz-metric-row"><span>Review</span><span>${statusPill(ad.status)}</span></div>
+            <div style="display:flex; gap:8px; margin-top: 8px;">
+                <button class="btn-small btn-approve" onclick="approveInternalAd('${ad.id}')">Approve</button>
+                <button class="btn-small btn-reject" onclick="rejectInternalAd('${ad.id}')">Reject</button>
+            </div>
+        </div>
+    `).join('') : '<div class="viz-empty">No pending items</div>';
+
+    queueBox.innerHTML = queued.length ? queued.map((ad, idx) => `
+        <div class="viz-card">
+            <div class="viz-card-title">#${idx + 1} ${ad.title}</div>
+            <div class="viz-card-sub">${ad.region.toUpperCase()} • queued</div>
+            <div class="viz-chip-row">
+                <span class="viz-chip">Auto-queued on approval</span>
+                <span class="viz-chip">Priority ${ad.priority || 0}</span>
+            </div>
+            <div style="display:flex; gap:8px; margin-top: 8px;">
+                <button class="btn-small btn-edit" onclick="launchInternalAdNow('${ad.id}')">Launch Now</button>
+                <button class="btn-small btn-reject" onclick="removeInternalAd('${ad.id}')">Remove</button>
+            </div>
+        </div>
+    `).join('') : '<div class="viz-empty">Queue is empty</div>';
+
+    liveBox.innerHTML = live.length ? live.map((ad) => `
+        <div class="viz-card">
+            <div class="viz-card-title">${ad.title}</div>
+            <div class="viz-card-sub">${ad.region.toUpperCase()} • live now</div>
+            <div class="viz-chip-row">
+                <span class="viz-chip">Started ${new Date(ad.updatedAt).toLocaleTimeString()}</span>
+            </div>
+            <div style="display:flex; gap:8px; margin-top: 8px;">
+                <button class="btn-small btn-reject" onclick="removeInternalAd('${ad.id}')">Remove Live</button>
+            </div>
+        </div>
+    `).join('') : '<div class="viz-empty">Nothing live</div>';
+
+    const pendingCountEl = document.getElementById('internalPendingCount');
+    const queuedCountEl = document.getElementById('internalQueuedCount');
+    const liveCountEl = document.getElementById('internalLiveCount');
+    if (pendingCountEl) pendingCountEl.textContent = String(pending.length);
+    if (queuedCountEl) queuedCountEl.textContent = String(queued.length);
+    if (liveCountEl) liveCountEl.textContent = String(live.length);
+
+    const autoState = internalAutoMode ? `AUTO ON (${internalAutoIntervalSec}s)` : 'AUTO OFF';
+    setInternalWorkflowHint(`Queue status: ${queued.length} queued, ${live.length} live • ${autoState}`);
+}
+
 // Initialize admin dashboard
 window.addEventListener('DOMContentLoaded', function() {
     if (checkAdminSession()) {
+        loadInternalAdsState();
+        ensureInternalDemoSeed();
+        loadInternalAutoSettings();
+        renderInternalAdsWorkflow();
+        bindInternalAutoControls();
+        startInternalAutoTimer();
+        initRegionSelection();
+
         // Wire demo toggle
         const toggle = document.getElementById('adminDemoMode');
         if (toggle) {
@@ -276,13 +707,17 @@ window.addEventListener('DOMContentLoaded', function() {
                 if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;"><div class="demo-spinner" style="width:40px;height:40px;margin:0 auto 15px;"></div>Loading data...</td></tr>';
                 const dtbody = document.getElementById('deploymentsTableBody');
                 if (dtbody) dtbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;"><div class="demo-spinner" style="width:40px;height:40px;margin:0 auto 15px;"></div>Loading data...</td></tr>';
-                const timeline = document.getElementById('scheduleTimeline');
-                if (timeline) timeline.innerHTML = '<div style="color: var(--tmobile-light-gray); padding: 40px; text-align: center;"><div class="demo-spinner" style="width:40px;height:40px;margin:0 auto 15px;"></div>Loading schedule...</div>';
 
                 // Reload everything (swap between real/demo)
                 try {
                     await loadAllBiddings();
                     await loadAllDeployments();
+                    if (toggle.checked) {
+                        loadInternalAdsState();
+                        ensureInternalDemoSeed();
+                        renderInternalAdsWorkflow();
+                    }
+                    refreshDashboardViews();
                 } finally {
                     window.dispatchEvent(new CustomEvent('admin-demo-mode-changed', { detail: { enabled: toggle.checked } }));
                     showDemoLoading(false);
@@ -297,6 +732,7 @@ window.addEventListener('DOMContentLoaded', function() {
         }, 700);
         // Ensure first tab works even before user clicks.
         window.switchTab('all-biddings');
+        window.switchInternalTab('tmobile-tuesday');
     }
 });
 
@@ -325,9 +761,7 @@ function destroyIf(chart) {
 }
 
 function computeZipcodeList(bid) {
-    if (Array.isArray(bid.zipcodes) && bid.zipcodes.length) return bid.zipcodes.map(String);
-    if (bid.zipcode) return [String(bid.zipcode)];
-    return [];
+    return getBidZipcodes(bid);
 }
 
 function renderAnalyticsCharts() {
@@ -344,13 +778,14 @@ function renderAnalyticsCharts() {
         return;
     }
 
-    const hasData = Array.isArray(allBiddings) && allBiddings.length > 0;
+    const scopedBiddings = getFilteredBiddings();
+    const hasData = Array.isArray(scopedBiddings) && scopedBiddings.length > 0;
     const labels7 = getLastNDates(7);
 
     // Revenue by day (use createdAt if present; else fake)
     const revenueMap = new Map(labels7.map(d => [d, 0]));
     if (hasData) {
-        for (const b of allBiddings) {
+        for (const b of scopedBiddings) {
             const createdAt = b.createdAt ? new Date(b.createdAt) : null;
             if (!createdAt || Number.isNaN(createdAt.getTime())) continue;
             const key = formatDateInput(createdAt);
@@ -358,9 +793,9 @@ function renderAnalyticsCharts() {
         }
         // If all dates are zero (demo data createdAt outside 7-day window), spread bidAmount across 7 days
         const totalRev = Array.from(revenueMap.values()).reduce((a, b) => a + b, 0);
-        if (totalRev === 0 && allBiddings.length > 0) {
+        if (totalRev === 0 && scopedBiddings.length > 0) {
             console.log('No revenue in last 7 days, spreading data evenly');
-            const avgPerDay = Math.round(allBiddings.reduce((s, b) => s + (b.bidAmount || 0), 0) / labels7.length);
+            const avgPerDay = Math.round(scopedBiddings.reduce((s, b) => s + (b.bidAmount || 0), 0) / labels7.length);
             labels7.forEach((d, i) => revenueMap.set(d, avgPerDay + Math.round(Math.sin(i) * avgPerDay * 0.3)));
         }
     } else {
@@ -375,17 +810,17 @@ function renderAnalyticsCharts() {
     const statuses = ['pending', 'active', 'completed', 'rejected'];
     const statusCounts = { pending: 0, active: 0, completed: 0, rejected: 0 };
     if (hasData) {
-        for (const b of allBiddings) {
+        for (const b of scopedBiddings) {
             const s = (b.status || 'pending');
             if (statusCounts[s] !== undefined) statusCounts[s] += 1;
         }
         // Ensure at least some data if we have biddings
         const total = Object.values(statusCounts).reduce((a, b) => a + b, 0);
-        if (total === 0 && allBiddings.length > 0) {
-            statusCounts.active = Math.floor(allBiddings.length * 0.6);
-            statusCounts.pending = Math.floor(allBiddings.length * 0.25);
-            statusCounts.completed = Math.floor(allBiddings.length * 0.1);
-            statusCounts.rejected = allBiddings.length - statusCounts.active - statusCounts.pending - statusCounts.completed;
+        if (total === 0 && scopedBiddings.length > 0) {
+            statusCounts.active = Math.floor(scopedBiddings.length * 0.6);
+            statusCounts.pending = Math.floor(scopedBiddings.length * 0.25);
+            statusCounts.completed = Math.floor(scopedBiddings.length * 0.1);
+            statusCounts.rejected = scopedBiddings.length - statusCounts.active - statusCounts.pending - statusCounts.completed;
         }
     } else {
         statusCounts.pending = 6;
@@ -400,12 +835,12 @@ function renderAnalyticsCharts() {
     // Top zipcodes by # campaigns
     const zipCount = new Map();
     if (hasData) {
-        for (const b of allBiddings) {
+        for (const b of scopedBiddings) {
             const zips = computeZipcodeList(b);
             for (const z of zips) zipCount.set(z, (zipCount.get(z) || 0) + 1);
         }
         // Fallback if no zipcodes found
-        if (zipCount.size === 0 && allBiddings.length > 0) {
+        if (zipCount.size === 0 && scopedBiddings.length > 0) {
             console.log('No zipcodes found, using demo fallback');
             ['98101','10001','90001','60601','77001','78701'].forEach((z, i) => zipCount.set(z, 10 - i));
         }
@@ -601,7 +1036,6 @@ async function loadAllBiddings() {
         console.log('Loaded', allBiddings.length, 'biddings');
         updateStatistics();
         displayBiddings();
-        displaySchedule();
         renderAnalyticsCharts();
 
     } catch (error) {
@@ -617,7 +1051,8 @@ async function loadAllBiddings() {
             allBiddings = [{
                 id: 'demo_fallback_1',
                 userId: 'M001',
-                userEmail: 'm001@demo.merchant',
+                userEmail: getMerchantName('M001'),
+                userContact: getMerchantEmail('M001'),
                 zipcodes: ['98101'],
                 startDate: '2025-07-15',
                 endDate: '2025-07-15',
@@ -631,32 +1066,37 @@ async function loadAllBiddings() {
         }
         updateStatistics();
         displayBiddings();
-        displaySchedule();
         renderAnalyticsCharts();
     }
 }
 
 // Update statistics
 function updateStatistics() {
-    const total = allBiddings.length;
-    const active = allBiddings.filter(b => b.status === 'active').length;
-    const pending = allBiddings.filter(b => b.status === 'pending').length;
-    const totalRevenue = allBiddings.reduce((sum, b) => sum + (b.bidAmount || 0), 0);
-    const totalImpressions = allBiddings.reduce((sum, b) => sum + (Number(b.estimatedReach) || 0), 0);
+    const scopedBiddings = getFilteredBiddings();
+    const scopedDeployments = getFilteredDeployments();
+    const activeBids = scopedBiddings.filter((b) => b.status === 'active');
+    const activeOrPendingDeployments = scopedDeployments.filter((d) => d.status === 'active' || d.status === 'pending');
 
-    document.getElementById('totalBiddings').textContent = total;
-    document.getElementById('activeBiddings').textContent = active;
-    document.getElementById('pendingBiddings').textContent = pending;
-    document.getElementById('totalRevenue').textContent = '$' + totalRevenue.toLocaleString();
-    const impressionsEl = document.getElementById('totalImpressions');
-    if (impressionsEl) impressionsEl.textContent = formatNumber(totalImpressions);
-    
-    // Update trends and visualizations
-    updateTrends(allBiddings);
-    renderPerformanceHeatmap(allBiddings);
-    renderCampaignTimeline(allBiddings);
-    renderCampaignFunnel(allBiddings);
-    renderSparklines(allBiddings);
+    const deviceCount = activeOrPendingDeployments.reduce((sum, d) => sum + Number(d.activeDevices || 0), 0);
+    const liveImpressions = Math.round(activeBids.reduce((sum, b) => sum + Number(b.estimatedReach || 0), 0) / 24);
+    const liveAds = activeBids.length;
+
+    const deviceEl = document.getElementById('rtDeviceCount');
+    if (deviceEl) deviceEl.textContent = formatNumber(deviceCount);
+    const impEl = document.getElementById('rtImpressions');
+    if (impEl) impEl.textContent = formatNumber(liveImpressions);
+    const liveAdsEl = document.getElementById('rtLiveAds');
+    if (liveAdsEl) liveAdsEl.textContent = formatNumber(liveAds);
+
+    const hintEl = document.getElementById('rtLiveAdsHint');
+    if (hintEl) {
+        const preview = activeBids.slice(0, 3).map((b) => `#${String(b.id).slice(-6)}`).join(', ');
+        hintEl.textContent = preview || 'No active ads in this region';
+    }
+
+    renderPerformanceHeatmap(scopedBiddings);
+    renderCampaignTimeline(scopedBiddings);
+    renderCampaignFunnel(scopedBiddings);
 }
 
 function renderMetricBar(value, max, label) {
@@ -676,9 +1116,43 @@ function renderMetricBar(value, max, label) {
     `;
 }
 
+function stripChineseForCampaignView(text) {
+    return String(text || '')
+        .replace(/[\u3400-\u9FFF]/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
+function mutateCampaignStatusLocal(bidId, newStatus) {
+    const idx = allBiddings.findIndex((b) => b.id === bidId);
+    if (idx < 0) return false;
+    allBiddings[idx].status = newStatus;
+    allBiddings[idx].updatedAt = new Date().toISOString();
+    return true;
+}
+
+async function setCampaignStatusSmart(bidId, newStatus, actionName) {
+    const ask = confirm(`Confirm ${actionName} for this campaign?`);
+    if (!ask) return;
+
+    if (isUsingDemoData) {
+        if (mutateCampaignStatusLocal(bidId, newStatus)) {
+            refreshDashboardViews();
+        }
+        return;
+    }
+
+    await updateDoc(doc(db, 'bids', bidId), {
+        status: newStatus,
+        updatedAt: new Date().toISOString(),
+        updatedBy: adminSession ? adminSession.username : 'admin'
+    });
+    await loadAllBiddings();
+}
+
 // Display biddings in table
 function displayBiddings(filteredBiddings = null) {
-    const biddings = filteredBiddings || allBiddings;
+    const biddings = filteredBiddings || getFilteredBiddings();
     const tbody = document.getElementById('biddingsTableBody');
     if (!tbody) return;
     const maxBid = Math.max(1, ...biddings.map((b) => Number(b.bidAmount) || 0));
@@ -693,6 +1167,9 @@ function displayBiddings(filteredBiddings = null) {
         const zipcodes = bid.zipcodes && bid.zipcodes.length > 0
             ? bid.zipcodes.join(', ')
             : bid.zipcode || 'N/A';
+        const geoPreview = zipToGeo((bid.zipcodes && bid.zipcodes[0]) || bid.zipcode || '');
+        const merchantDisplay = stripChineseForCampaignView(bid.userEmail || 'Unknown') || 'Unknown';
+        const merchantSub = stripChineseForCampaignView(bid.userContact || `ID: ${bid.userId?.slice(0, 8)}...`) || `ID: ${bid.userId?.slice(0, 8)}...`;
 
         return `
             <tr>
@@ -702,12 +1179,13 @@ function displayBiddings(filteredBiddings = null) {
                 </td>
                 <td>
                     <div class="user-cell">
-                        <div>${bid.userEmail || 'Unknown'}</div>
-                        <div class="user-email">ID: ${bid.userId?.slice(0, 8)}...</div>
+                        <div>${merchantDisplay}</div>
+                        <div class="user-email">${merchantSub}</div>
                     </div>
                 </td>
                 <td>
                     <div class="market-chips">${zipcodes}</div>
+                    <div class="user-email">${geoPreview.region.toUpperCase()} • ${geoPreview.state} • ${geoPreview.area}</div>
                 </td>
                 <td>
                     ${renderMetricBar(Number(bid.bidAmount || 0), maxBid, 'Bid')}
@@ -716,15 +1194,10 @@ function displayBiddings(filteredBiddings = null) {
                 <td><span class="status-badge status-${bid.status || 'pending'}">${(bid.status || 'pending').toUpperCase()}</span></td>
                 <td>
                     <div class="action-btns">
-                        ${isUsingDemoData ? `
-                            <span style="font-size: 0.85em; color: var(--tmobile-gray);">Demo</span>
-                        ` : `
-                            <button class="btn-small btn-edit" onclick="editBidding('${bid.id}')">Edit</button>
-                            ${bid.status === 'pending' ? `
-                                <button class="btn-small btn-approve" onclick="updateStatus('${bid.id}', 'active')">Approve</button>
-                                <button class="btn-small btn-reject" onclick="updateStatus('${bid.id}', 'rejected')">Reject</button>
-                            ` : ''}
-                        `}
+                        <button class="btn-small btn-edit" onclick="editBidding('${bid.id}')">Edit</button>
+                        ${bid.status !== 'active' ? `<button class="btn-small btn-approve" onclick="manualLaunchCampaign('${bid.id}')">Launch</button>` : ''}
+                        ${(bid.status === 'active' || bid.status === 'pending') ? `<button class="btn-small btn-reject" onclick="manualWithdrawCampaign('${bid.id}')">Withdraw</button>` : ''}
+                        ${bid.status === 'pending' ? `<button class="btn-small btn-approve" onclick="updateStatus('${bid.id}', 'active')">Approve</button>` : ''}
                     </div>
                 </td>
             </tr>
@@ -735,10 +1208,12 @@ function displayBiddings(filteredBiddings = null) {
 // Display schedule timeline
 function displaySchedule() {
     const timeline = document.getElementById('scheduleTimeline');
+    if (!timeline) return;
+    const scopedBiddings = getFilteredBiddings();
 
     // Group biddings by start date
     const scheduleMap = {};
-    allBiddings
+    scopedBiddings
         .filter(b => b.status === 'active' || b.status === 'pending')
         .forEach(bid => {
             const date = bid.startDate;
@@ -783,7 +1258,7 @@ window.filterBiddings = function() {
     const searchText = document.getElementById('searchUser').value.toLowerCase();
     const dateFilter = document.getElementById('dateFilter').value;
 
-    let filtered = allBiddings;
+    let filtered = getFilteredBiddings();
 
     if (statusFilter) {
         filtered = filtered.filter(b => b.status === statusFilter);
@@ -808,26 +1283,149 @@ window.filterBiddings = function() {
 // Switch tabs
 window.switchTab = function(tabName, tabElement) {
     // Update tab buttons
-    document.querySelectorAll('.tab').forEach(tab => {
+    document.querySelectorAll('.dash-tab').forEach(tab => {
         tab.classList.remove('active');
     });
     if (tabElement) {
         tabElement.classList.add('active');
     } else {
-        const matched = Array.from(document.querySelectorAll('.tab')).find(t => t.getAttribute('onclick')?.includes(`'${tabName}'`));
+        const matched = Array.from(document.querySelectorAll('.dash-tab')).find(t => t.getAttribute('onclick')?.includes(`'${tabName}'`));
         if (matched) matched.classList.add('active');
     }
 
     // Update tab content
-    document.querySelectorAll('.tab-content').forEach(content => {
+    document.querySelectorAll('.dash-tab-content').forEach(content => {
         content.classList.remove('active');
     });
-    document.getElementById(tabName).classList.add('active');
+    const target = document.getElementById(tabName);
+    if (target) target.classList.add('active');
     
     // If switching to Analytics, render charts (they might not have been rendered yet)
     if (tabName === 'analytics') {
         setTimeout(() => renderAnalyticsCharts(), 100);
     }
+};
+
+window.switchInternalTab = function(tabName, tabElement) {
+    document.querySelectorAll('.internal-tab').forEach(tab => tab.classList.remove('active'));
+    if (tabElement) {
+        tabElement.classList.add('active');
+    } else {
+        const matched = Array.from(document.querySelectorAll('.internal-tab')).find((t) => t.getAttribute('onclick')?.includes(`'${tabName}'`));
+        if (matched) matched.classList.add('active');
+    }
+    document.querySelectorAll('.internal-tab-content').forEach(content => content.classList.remove('active'));
+    const target = document.getElementById(tabName);
+    if (target) target.classList.add('active');
+};
+
+window.switchSection = function(sectionName, tabElement) {
+    currentSection = sectionName === 'internal-content' ? 'internal-content' : 'dashboard';
+    document.querySelectorAll('.section-tab').forEach((tab) => tab.classList.remove('active'));
+    if (tabElement) {
+        tabElement.classList.add('active');
+    } else {
+        const matched = Array.from(document.querySelectorAll('.section-tab')).find((t) => t.getAttribute('onclick')?.includes(`'${currentSection}'`));
+        if (matched) matched.classList.add('active');
+    }
+    const dashboard = document.getElementById('dashboard-section');
+    const internal = document.getElementById('internal-content-section');
+    if (dashboard) dashboard.classList.toggle('active', currentSection === 'dashboard');
+    if (internal) internal.classList.toggle('active', currentSection === 'internal-content');
+};
+
+window.submitInternalAd = function() {
+    const title = (document.getElementById('internalAdTitle')?.value || '').trim();
+    const region = normalizeRegion(document.getElementById('internalAdRegion')?.value || 'all') || 'all';
+    const note = (document.getElementById('internalAdNote')?.value || '').trim();
+    if (!title) {
+        alert('Please input internal ad title.');
+        return;
+    }
+    const now = new Date().toISOString();
+    internalAdsState.unshift({
+        id: `ia_${Date.now()}`,
+        title,
+        note,
+        region,
+        status: 'pending',
+        priority: Date.now(),
+        createdAt: now,
+        updatedAt: now
+    });
+    saveInternalAdsState();
+    renderInternalAdsWorkflow();
+    setInternalWorkflowHint('Submitted for review. Status: pending.');
+    const titleEl = document.getElementById('internalAdTitle');
+    const noteEl = document.getElementById('internalAdNote');
+    if (titleEl) titleEl.value = '';
+    if (noteEl) noteEl.value = '';
+};
+
+window.approveInternalAd = function(id) {
+    const idx = internalAdsState.findIndex((x) => x.id === id);
+    if (idx < 0) return;
+    internalAdsState[idx].status = 'queued';
+    internalAdsState[idx].updatedAt = new Date().toISOString();
+    internalAdsState[idx].priority = Date.now();
+    saveInternalAdsState();
+    renderInternalAdsWorkflow();
+    setInternalWorkflowHint('Approved. Item moved to launch queue front.');
+};
+
+window.rejectInternalAd = function(id) {
+    const idx = internalAdsState.findIndex((x) => x.id === id);
+    if (idx < 0) return;
+    internalAdsState[idx].status = 'rejected';
+    internalAdsState[idx].updatedAt = new Date().toISOString();
+    saveInternalAdsState();
+    renderInternalAdsWorkflow();
+    setInternalWorkflowHint('Item rejected.');
+};
+
+window.launchInternalAdNow = function(id) {
+    const idx = internalAdsState.findIndex((x) => x.id === id);
+    if (idx < 0) return;
+    internalAdsState.forEach((x) => {
+        if (x.status === 'live') x.status = 'queued';
+    });
+    internalAdsState[idx].status = 'live';
+    internalAdsState[idx].updatedAt = new Date().toISOString();
+    saveInternalAdsState();
+    renderInternalAdsWorkflow();
+    setInternalWorkflowHint('Launched now. Previous live item returned to queue.');
+};
+
+window.playNextInternalAd = function() {
+    const queued = internalAdsState
+        .filter((x) => x.status === 'queued')
+        .sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    if (!queued.length) {
+        alert('Queue is empty.');
+        return;
+    }
+    launchInternalAdNow(queued[0].id);
+};
+
+window.removeInternalAd = function(id) {
+    const idx = internalAdsState.findIndex((x) => x.id === id);
+    if (idx < 0) return;
+    internalAdsState.splice(idx, 1);
+    saveInternalAdsState();
+    renderInternalAdsWorkflow();
+    setInternalWorkflowHint('Item removed from workflow.');
+};
+
+window.applyInternalAutoSettings = function() {
+    const modeEl = document.getElementById('internalAutoMode');
+    const intervalEl = document.getElementById('internalAutoIntervalSec');
+    internalAutoMode = Boolean(modeEl?.checked);
+    const sec = Number(intervalEl?.value || 20);
+    internalAutoIntervalSec = Math.max(5, Math.min(300, Number.isFinite(sec) ? sec : 20));
+    if (intervalEl) intervalEl.value = String(internalAutoIntervalSec);
+    saveInternalAutoSettings();
+    startInternalAutoTimer();
+    renderInternalAdsWorkflow();
 };
 
 // Edit bidding
@@ -849,6 +1447,7 @@ window.editBidding = function(bidId) {
                 <option value="active" ${bid.status === 'active' ? 'selected' : ''}>Active</option>
                 <option value="completed" ${bid.status === 'completed' ? 'selected' : ''}>Completed</option>
                 <option value="rejected" ${bid.status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                <option value="withdrawn" ${bid.status === 'withdrawn' ? 'selected' : ''}>Withdrawn</option>
             </select>
         </div>
 
@@ -931,29 +1530,30 @@ window.closeEditModal = function() {
 
 // Update status
 window.updateStatus = async function(bidId, newStatus) {
-    if (isUsingDemoData) {
-        alert('Demo mode: approving/rejecting is disabled (fake data only).');
-        return;
-    }
-    const action = newStatus === 'active' ? 'approve' : 'reject';
-    if (!confirm(`Are you sure you want to ${action} this campaign?`)) {
-        return;
-    }
-
     try {
-        await updateDoc(doc(db, 'bids', bidId), {
-            status: newStatus,
-            updatedAt: new Date().toISOString(),
-            updatedBy: adminSession ? adminSession.username : 'admin'
-        });
-
-        console.log('Status updated to', newStatus);
-        alert(`Campaign ${action}d successfully!`);
-        loadAllBiddings();
-
+        const action = newStatus === 'active' ? 'approve' : 'reject';
+        await setCampaignStatusSmart(bidId, newStatus, action);
     } catch (error) {
         console.error('Error updating status:', error);
         alert('Error updating status: ' + error.message);
+    }
+};
+
+window.manualLaunchCampaign = async function(bidId) {
+    try {
+        await setCampaignStatusSmart(bidId, 'active', 'launch');
+    } catch (error) {
+        console.error('Error launching campaign:', error);
+        alert('Failed to launch: ' + error.message);
+    }
+};
+
+window.manualWithdrawCampaign = async function(bidId) {
+    try {
+        await setCampaignStatusSmart(bidId, 'withdrawn', 'withdraw');
+    } catch (error) {
+        console.error('Error withdrawing campaign:', error);
+        alert('Failed to withdraw: ' + error.message);
     }
 };
 
@@ -1000,7 +1600,7 @@ async function loadAllDeployments() {
 
 // Display deployments table
 function displayDeployments(filteredDeployments = null) {
-    const deployments = filteredDeployments || allDeployments;
+    const deployments = filteredDeployments || getFilteredDeployments();
     const tbody = document.getElementById('deploymentsTableBody');
 
     if (!tbody) return;

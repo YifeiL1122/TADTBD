@@ -26,15 +26,56 @@ import {
   demoDateYmdToInput,
   buildBidRowsFromDemoCsv
 } from './demo-dataset.js';
+import { getMerchantName, getMerchantEmail } from './demo-merchants.js';
 
 function $(id) { return document.getElementById(id); }
 
 let chartSpendBySlot = null;
 let chartPositionMix = null;
 let chartTopMerchants = null;
+let latestMerchantRows = [];
+let latestAuctionRows = [];
+let rankingMerchantRegionMap = new Map();
 
 function isDemoModeEnabled() {
   return localStorage.getItem('adminDemoMode') !== 'false';
+}
+
+function regionFromZip(zip) {
+  const s = String(zip || '').replace(/\D/g, '');
+  if (!s) return 'central';
+  const prefix = Number(s.slice(0, 1));
+  if (Number.isNaN(prefix)) return 'central';
+  if (prefix <= 3) return 'east';
+  if (prefix <= 6) return 'central';
+  return 'west';
+}
+
+function buildMerchantRegionMap(auctionRows) {
+  const regionMap = new Map();
+  for (const r of auctionRows || []) {
+    const key = String(r.merchant_id || r.merchant_email || '').trim();
+    if (!key) continue;
+    if (!regionMap.has(key)) regionMap.set(key, new Set());
+    regionMap.get(key).add(regionFromZip(r.zipcode));
+  }
+  return regionMap;
+}
+
+function updateMerchantRegionFilterOptions() {
+  const sel = $('rankingMerchantRegionFilter');
+  if (!sel) return;
+  const current = sel.value || 'all';
+  const regions = new Set(['east', 'central', 'west']);
+  for (const set of rankingMerchantRegionMap.values()) {
+    for (const region of set) regions.add(region);
+  }
+  const ordered = ['all', ...['east', 'central', 'west'].filter((r) => regions.has(r))];
+  sel.innerHTML = ordered.map((r) => {
+    if (r === 'all') return '<option value="all">Region: All</option>';
+    return `<option value="${r}">Region: ${r.charAt(0).toUpperCase()}${r.slice(1)}</option>`;
+  }).join('');
+  sel.value = ordered.includes(current) ? current : 'all';
 }
 
 function buildFallbackDemoBidRows(targetYmd) {
@@ -50,12 +91,13 @@ function buildFallbackDemoBidRows(targetYmd) {
           date,
           time_slot: s,
           merchant_id: merchants[m],
-          merchant_email: `${merchants[m].toLowerCase()}@demo.merchant`,
+          merchant_email: getMerchantName(merchants[m]),
           ad_code: `DEMO-${merchants[m]}-${zipcodes[z]}-${s}`,
           bid_cpm: Number((1 + (m * 0.6) + (s * 0.08)).toFixed(2)),
           campaign_id: `demo_${merchants[m]}_${z}_${s}`,
           poster_image_url: '',
-          poster_slogan: `Demo ${merchants[m]} Slot ${s}`
+          poster_slogan: `${getMerchantName(merchants[m])} Slot ${s}`,
+          merchant_contact: getMerchantEmail(merchants[m])
         });
       }
     }
@@ -116,37 +158,81 @@ function renderKpis(auctionRows) {
 function renderMerchantTable(merchantRows) {
   const cards = $('rankingMerchantCards');
   const tbody = $('rankingMerchantTableBody'); // backward compatibility
-  const maxSpend = Math.max(1, ...merchantRows.map((r) => Number(r.total_spend_usd || 0)));
-  const maxImps = Math.max(1, ...merchantRows.map((r) => Number(r.total_impressions || 0)));
+  const tierFilter = $('rankingMerchantTierFilter')?.value || 'all';
+  const regionFilter = $('rankingMerchantRegionFilter')?.value || 'all';
+  const sorted = [...merchantRows].sort((a, b) => Number(b.total_spend_usd || 0) - Number(a.total_spend_usd || 0));
+  const maxSpend = Math.max(1, ...sorted.map((r) => Number(r.total_spend_usd || 0)));
+  const maxImps = Math.max(1, ...sorted.map((r) => Number(r.total_impressions || 0)));
   if (!cards && !tbody) return;
-  if (!merchantRows.length) {
+  if (!sorted.length) {
     if (cards) cards.innerHTML = '<div class="viz-empty">No merchant summary</div>';
     if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 40px;">No merchant summary</td></tr>';
     return;
   }
-  const top = merchantRows.slice(0, 24);
+  const regionFiltered = sorted.filter((r) => {
+    if (regionFilter === 'all') return true;
+    const key = String(r.merchant_id || r.merchant_email || '').trim();
+    const regionSet = rankingMerchantRegionMap.get(key);
+    return Boolean(regionSet && regionSet.has(regionFilter));
+  });
+  const top = regionFiltered.slice(0, 24);
+
+  const tierMeta = {
+    top: { title: 'Top Performers', sub: 'Highest spend and strongest auction wins.' },
+    growth: { title: 'Growth Merchants', sub: 'Solid performance with room to scale.' },
+    emerging: { title: 'Emerging Merchants', sub: 'Lower spend accounts to monitor and optimize.' }
+  };
+
+  const tiers = { top: [], growth: [], emerging: [] };
+  for (const r of top) {
+    const spend = Number(r.total_spend_usd || 0);
+    const wins = Number(r.wins || 0);
+    if (spend >= maxSpend * 0.66 || wins >= 120) tiers.top.push(r);
+    else if (spend >= maxSpend * 0.33 || wins >= 40) tiers.growth.push(r);
+    else tiers.emerging.push(r);
+  }
+
+  const tierLimits = { top: 6, growth: 8, emerging: 6 };
 
   if (cards) {
-    cards.innerHTML = top.map((r) => {
-      const spend = Number(r.total_spend_usd || 0);
-      const imps = Number(r.total_impressions || 0);
-      const wins = Number(r.wins || 0);
-      const spendPct = Math.max(4, Math.round((spend / maxSpend) * 100));
-      const impsPct = Math.max(4, Math.round((imps / maxImps) * 100));
+    const tierOrder = tierFilter === 'all' ? ['top', 'growth', 'emerging'] : [tierFilter];
+    cards.innerHTML = tierOrder.map((tierKey) => {
+      const merchants = tiers[tierKey];
+      const meta = tierMeta[tierKey];
+      const limited = merchants.slice(0, tierLimits[tierKey]);
+      const hiddenCount = Math.max(0, merchants.length - limited.length);
+      if (!merchants.length) return '';
       return `
-        <div class="viz-card">
-          <div class="viz-card-title">${r.merchant_email || r.merchant_id}</div>
-          <div class="viz-card-sub">ID: ${String(r.merchant_id).slice(0, 12)}</div>
-          <div class="viz-metric-row"><span>Spend</span><span>$${spend.toLocaleString()}</span></div>
-          <div class="viz-progress"><span style="width:${spendPct}%"></span></div>
-          <div class="viz-metric-row"><span>Impressions</span><span>${imps.toLocaleString()}</span></div>
-          <div class="viz-progress"><span style="width:${impsPct}%"></span></div>
-          <div class="viz-chip-row">
-            <span class="viz-chip">Wins ${wins.toLocaleString()}</span>
+        <section class="merchant-tier">
+          <div class="merchant-tier-header">
+            <div class="merchant-tier-title">${meta.title}</div>
+            <div class="merchant-tier-sub">${meta.sub}</div>
           </div>
-        </div>
+          <div class="viz-card-grid merchant-tier-grid">
+            ${limited.map((r) => {
+              const spend = Number(r.total_spend_usd || 0);
+              const imps = Number(r.total_impressions || 0);
+              const wins = Number(r.wins || 0);
+              const spendPct = Math.max(4, Math.round((spend / maxSpend) * 100));
+              const impsPct = Math.max(4, Math.round((imps / maxImps) * 100));
+              return `
+                <div class="viz-card">
+                  <div class="viz-card-title">${r.merchant_email || r.merchant_id}</div>
+                  <div class="viz-card-sub">$${spend.toLocaleString()} total spend</div>
+                  <div class="viz-metric-row"><span>Impressions</span><span>${imps.toLocaleString()}</span></div>
+                  <div class="viz-progress"><span style="width:${impsPct}%"></span></div>
+                  <div class="viz-chip-row">
+                    <span class="viz-chip">Wins ${wins.toLocaleString()}</span>
+                    <span class="viz-chip">Spend Share ${spendPct}%</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          ${hiddenCount ? `<div class="merchant-tier-more">+${hiddenCount} more merchants in this tier</div>` : ''}
+        </section>
       `;
-    }).join('');
+    }).join('') || '<div class="viz-empty">No merchants match this filter.</div>';
   }
 
   if (tbody) {
@@ -166,26 +252,92 @@ function renderMerchantTable(merchantRows) {
   }
 }
 
+function rerenderMerchantCards() {
+  renderMerchantTable(latestMerchantRows);
+}
+
+function updateAuctionFilterOptions(auctionRows) {
+  const slotEl = $('rankingAuctionSlotFilter');
+  const posEl = $('rankingAuctionPositionFilter');
+  if (slotEl) {
+    const current = slotEl.value || 'all';
+    const slots = Array.from(new Set((auctionRows || []).map((r) => Number(r.time_slot)).filter((x) => Number.isFinite(x))))
+      .sort((a, b) => a - b);
+    slotEl.innerHTML = ['<option value="all">Slot: All</option>', ...slots.map((s) => `<option value="${s}">Slot: ${s}</option>`)].join('');
+    slotEl.value = slots.map(String).includes(current) ? current : 'all';
+  }
+  if (posEl) {
+    const current = posEl.value || 'all';
+    const positions = Array.from(new Set((auctionRows || []).map((r) => Number(r.position)).filter((x) => Number.isFinite(x))))
+      .sort((a, b) => a - b);
+    posEl.innerHTML = ['<option value="all">Position: All</option>', ...positions.map((p) => `<option value="${p}">Position: ${p}</option>`)].join('');
+    posEl.value = positions.map(String).includes(current) ? current : 'all';
+  }
+}
+
+function getFilteredAuctionRows(auctionRows) {
+  const regionFilter = $('rankingAuctionRegionFilter')?.value || 'all';
+  const slotFilter = $('rankingAuctionSlotFilter')?.value || 'all';
+  const positionFilter = $('rankingAuctionPositionFilter')?.value || 'all';
+  const keyword = String($('rankingAuctionKeywordFilter')?.value || '').trim().toLowerCase();
+
+  return (auctionRows || []).filter((r) => {
+    if (regionFilter !== 'all' && regionFromZip(r.zipcode) !== regionFilter) return false;
+    if (slotFilter !== 'all' && String(r.time_slot) !== String(slotFilter)) return false;
+    if (positionFilter !== 'all' && String(r.position) !== String(positionFilter)) return false;
+    if (keyword) {
+      const hay = `${r.merchant_email || ''} ${r.merchant_id || ''} ${r.poster_slogan || ''} ${r.ad_code || ''}`.toLowerCase();
+      if (!hay.includes(keyword)) return false;
+    }
+    return true;
+  });
+}
+
+function rerenderAuctionCards() {
+  renderAuctionTable(latestAuctionRows);
+}
+
 function renderAuctionTable(auctionRows) {
   const cards = $('rankingAuctionCards');
   const tbody = $('rankingAuctionTableBody'); // backward compatibility
-  const maxCost = Math.max(1, ...auctionRows.map((r) => Number(r.cost_usd || 0)));
+  const limit = Number($('rankingAuctionLimitFilter')?.value || 24);
+  const filteredRows = getFilteredAuctionRows(auctionRows);
+  const maxCost = Math.max(1, ...filteredRows.map((r) => Number(r.cost_usd || 0)));
   if (!cards && !tbody) return;
   if (!auctionRows.length) {
     if (cards) cards.innerHTML = '<div class="viz-empty">No auction winners</div>';
     if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 40px;">No auction winners</td></tr>';
     return;
   }
-  const top = auctionRows.slice(0, 60);
+  if (!filteredRows.length) {
+    if (cards) cards.innerHTML = '<div class="viz-empty">No auction winners match this filter.</div>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 40px;">No winners match this filter</td></tr>';
+    return;
+  }
+  const top = filteredRows.slice(0, limit);
 
   if (cards) {
     cards.innerHTML = top.map((r) => {
       const cost = Number(r.cost_usd || 0);
       const costPct = Math.max(5, Math.round((cost / maxCost) * 100));
+      const rawTitle = String(r.poster_slogan || r.ad_code || 'Ad');
+      const titleParts = rawTitle.split('•').map((x) => x.trim()).filter(Boolean);
+      const titleMain = titleParts.length > 1 ? titleParts[0] : rawTitle;
+      const titleSecondaryRaw = titleParts.length > 1 ? titleParts.slice(1).join(' • ') : '';
+      const titleSecondary = titleSecondaryRaw.length > 26
+        ? `${titleSecondaryRaw.slice(0, 26)}...`
+        : titleSecondaryRaw;
+      const merchantPrimary = String(r.merchant_email || r.merchant_id || 'Unknown');
+      const merchantId = String(r.merchant_id || '').trim();
+      const merchantIdSecondary = merchantId
+        ? `Merchant ID: ${merchantId.length > 18 ? `${merchantId.slice(0, 18)}...` : merchantId}`
+        : '';
       return `
         <div class="viz-card">
-          <div class="viz-card-title">${r.poster_slogan || r.ad_code}</div>
-          <div class="viz-card-sub">${r.merchant_email || r.merchant_id}</div>
+          <div class="viz-card-title">${titleMain}</div>
+          ${titleSecondary ? `<div class="viz-card-sub auction-secondary">${titleSecondary}</div>` : ''}
+          <div class="viz-card-sub">${merchantPrimary}</div>
+          ${merchantIdSecondary ? `<div class="viz-card-sub auction-secondary">${merchantIdSecondary}</div>` : ''}
           <div class="viz-chip-row" style="margin-bottom: 8px;">
             <span class="viz-chip">ZIP ${r.zipcode}</span>
             <span class="viz-chip">Date ${r.date}</span>
@@ -417,6 +569,12 @@ async function loadLatestRun() {
     return ka.localeCompare(kb);
   });
 
+  latestMerchantRows = merchantRows;
+  latestAuctionRows = auctionRows;
+  rankingMerchantRegionMap = buildMerchantRegionMap(auctionRows);
+  updateMerchantRegionFilterOptions();
+  updateAuctionFilterOptions(auctionRows);
+
   renderKpis(auctionRows);
   renderMerchantTable(merchantRows);
   renderAuctionTable(auctionRows);
@@ -476,6 +634,12 @@ async function runRanking(opts = {}) {
 
     const auctionRows = runGspAuctions(bidRows, reserveCpm);
     const merchantRows = summarizeMerchants(auctionRows);
+
+    latestMerchantRows = merchantRows;
+    latestAuctionRows = auctionRows;
+    rankingMerchantRegionMap = buildMerchantRegionMap(auctionRows);
+    updateMerchantRegionFilterOptions();
+    updateAuctionFilterOptions(auctionRows);
 
     renderKpis(auctionRows);
     renderMerchantTable(merchantRows);
@@ -539,6 +703,46 @@ window.addEventListener('DOMContentLoaded', () => {
 
   $('btnRunRanking').addEventListener('click', runRanking);
   $('btnLoadLatestRanking').addEventListener('click', loadLatestRun);
+
+  const tierFilterEl = $('rankingMerchantTierFilter');
+  const regionFilterEl = $('rankingMerchantRegionFilter');
+  const resetFilterBtn = $('rankingMerchantFilterReset');
+  if (tierFilterEl) tierFilterEl.addEventListener('change', rerenderMerchantCards);
+  if (regionFilterEl) regionFilterEl.addEventListener('change', rerenderMerchantCards);
+  if (resetFilterBtn) {
+    resetFilterBtn.addEventListener('click', () => {
+      if (tierFilterEl) tierFilterEl.value = 'all';
+      if (regionFilterEl) regionFilterEl.value = 'all';
+      rerenderMerchantCards();
+    });
+  }
+
+  const auctionRegionEl = $('rankingAuctionRegionFilter');
+  const auctionSlotEl = $('rankingAuctionSlotFilter');
+  const auctionPosEl = $('rankingAuctionPositionFilter');
+  const auctionKeywordEl = $('rankingAuctionKeywordFilter');
+  const auctionLimitEl = $('rankingAuctionLimitFilter');
+  const auctionResetEl = $('rankingAuctionFilterReset');
+  if (auctionRegionEl) auctionRegionEl.addEventListener('change', rerenderAuctionCards);
+  if (auctionSlotEl) auctionSlotEl.addEventListener('change', rerenderAuctionCards);
+  if (auctionPosEl) auctionPosEl.addEventListener('change', rerenderAuctionCards);
+  if (auctionLimitEl) auctionLimitEl.addEventListener('change', rerenderAuctionCards);
+  if (auctionKeywordEl) {
+    auctionKeywordEl.addEventListener('input', () => {
+      window.clearTimeout(auctionKeywordEl._t);
+      auctionKeywordEl._t = window.setTimeout(rerenderAuctionCards, 120);
+    });
+  }
+  if (auctionResetEl) {
+    auctionResetEl.addEventListener('click', () => {
+      if (auctionRegionEl) auctionRegionEl.value = 'all';
+      if (auctionSlotEl) auctionSlotEl.value = 'all';
+      if (auctionPosEl) auctionPosEl.value = 'all';
+      if (auctionLimitEl) auctionLimitEl.value = '24';
+      if (auctionKeywordEl) auctionKeywordEl.value = '';
+      rerenderAuctionCards();
+    });
+  }
 
   window.addEventListener('admin-demo-mode-changed', async (evt) => {
     if (evt?.detail?.enabled) {
